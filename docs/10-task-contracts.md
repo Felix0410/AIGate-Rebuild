@@ -74,3 +74,15 @@ T03 RPC/异常/凭证传播、数据归属/故障演练、面试/压测报告、
 ## 每包交付模板
 
 变更文件清单、实现的业务主流程、接口/表/约束、测试命令与通过数量、风险与遗留问题、Git commit；不得回复“已经完成”但不给测试证据。总控负责 docs/ 的更新与任务重排。
+
+## Mandatory staging and completeness corrections (2026-10-21)
+
+The task summaries above are planning work packages, not permission for the local AI to design missing security or accounting rules. Detailed contracts now include 06a-billing-transactions.md, 07a-contract-details.md, 10a-acceptance-matrix.md, 15-implementation-defaults.md, 16-security-auth.md and 17-admin-api-contract.md.
+
+**P2/P3 vs P4 security:** In P2, Provider JSON proxy and Agent-Key validation may be E2E tested **only using a fake Provider and a test-only simulated Employee principal**. The real externally accessible paid Provider runtime route must remain disabled / fail-closed until P4 independent Employee authentication and Employee-Agent/Agent-Model permission checks are complete. P3 invocation metadata tests also use mock or test profiles. This prevents historical staged development from violating the confirmed dual-identity invariant.
+
+**P1 administration:** all live management API routes must authenticate the bootstrap administrator credential from 16-security-auth.md, even though full employee-linked RBAC arrives in P4. Admin bootstrap secret cannot be reused as runtime Agent or Employee credential.
+
+**P5 reservation accounting:** use balance and reserved rows per 06-database-design.md corrected section; confirmed settlement subtracts actual spend from balance and releases the full reservation, without deducting the held amount twice. Team grant expiry, unknown usage, price version and full funding-source order require acceptance tests before P5/P6 closeout.
+
+**Every coding task** must supply exact allowed files, schema delta, endpoint/DTO list, in-scope behavior and tests derived from the referenced design contract. Local AI is not a product owner; questions about missing constraints return to the project architect before coding. P1–P12 remain NOT STARTED.
