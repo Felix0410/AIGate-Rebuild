@@ -57,3 +57,9 @@ cd AIGate-Rebuild
 详细：业务检查见《01-业务与规则》D13，唯一执行链/问题列表见《02-架构与技术》D13，跨模块事务见《03-数据与接口》D13，阶段依赖见《04-阶段与任务》D13，SYS-01～SYS-20 见《05-测试与验收》D13，待决清单见《06-进度与协作》D13。
 
 **结论**：总体架构已有经过审查的主方案，但仍是 REVIEWED / NOT FROZEN；全量逐接口/DDL/测试固件与重大产品默认规则尚未冻结，P1～P12 均未编码、未授权启动。
+
+### P0-D14 技术方案已确认（2026-10-21）
+
+用户已确认当前推荐技术路线。**TECHNOLOGY CHOICES APPROVED**：Java21、模块化单体、Spring Boot4.1.1/MVC/Security、MyBatis-Plus Boot4 Starter 3.5.17、MySQL8.4 LTS/Flyway、Redis+Lua、RabbitMQ+Spring AMQP（P11）、Maven Wrapper/Compose/Testcontainers/CI、P7 MVC SSE 与 Provider Adapter、分阶段观测。RabbitMQ 不再作为“还需选择哪种 MQ”的开放项。决定/替代/复杂度和官方资料见《02-架构与技术》D14/ADR-007；验收见《05-测试与验收》TECH-01～TECH-12，状态同步《06-进度与协作》。
+
+**并非 ENGINEERING VERIFIED**：新仓库仍无 Java 工程及实测迁移/Redis/MQ/构建，通过官方发布信息只能确定选型基线，无法证明项目依赖组合已经跑通。具体 Maven Wrapper、镜像 patch/digest 和实测结果待技术门禁核验；**P0 设计未冻结、P1～P12 未启动**。
