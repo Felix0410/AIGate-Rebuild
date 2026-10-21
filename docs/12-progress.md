@@ -27,3 +27,11 @@
 每一工作包记录：日期、Phase/Task、Business Goal、变更文件、数据库 Migration、接口、测试命令/结果、提交 SHA、Code Review 结论、已知技术债、ADR 和下一步批准状态。
 
 任何旧分支或备份代码被重新推到 main 都应立即视为偏离文档基线。用户批准一个 Phase 完成之前不能自动进入下一 Phase。
+
+## 2026-10-21 — New Repository Migration COMPLETE / P0 NOT FROZEN
+
+新仓库：**Felix0410/AIGate-Rebuild**；通过已连接的 GitHub 直接提交全部新设计文档。旧 AIGate 仓库**完全未删除或改动**。新仓库的 `main` 只包含 docs/，无旧 Java 代码、测试、Flyway SQL、pom.xml 和部署环境。
+
+已完成新的总体产品规则、P0–P12 路线、技术选型、数据库/账务事务、安全、运行时/管理 API、验收与本地 AI 执行协议文档。纠正了 nullable 唯一键、Grant 幂等、价格版本字段、余额预留双扣风险和 P2/P3 提前开放付费运行时的漏洞。
+
+**进度事实**：P0 已建立设计基线，正在进行设计冻结前一致性审查；P1–P12 **均未开始**；未执行新工程测试，不能将旧项目已通过的 149 个测试算到本项目中。下一步为审核全部规则和精化 P1 逐次代码交付合同。用户未授权新工程写代码。旧 GitHub 仓库不受影响。
