@@ -48,3 +48,19 @@ finops_event_receipt(event_id,consumer_id,processed_at) unique(event_id,consumer
 结算：用唯一 invocationId 锁 reservation → 按可信 usage 更新各 Allocation、释放差额、写结算与 outbox。
 未知：保留待核对状态和审计证据。任何请求不可在数据库事务中等待 Provider 网络 I/O。
 金额禁止 float/double；未分配 tenantId 的单企业部署不可声称多租户隔离。详细数值示例见 02。
+
+
+## Physical schema corrections and constraints (2026-10-21, precedence over draft table above)
+
+The table list above was the initial data dictionary. These rules resolve implementation ambiguities; local AI must follow them rather than inventing alternatives.
+
+1. quota_bucket unique key must **never rely on nullable columns**: use owner_type ENUM(EmployeeAgentFree, EmployeeBase, CorporateFallbackWeeklyCap), owner_id BIGINT NOT NULL, agent_scope_id BIGINT NOT NULL DEFAULT 0, period_start DATETIME(6) NOT NULL, unique(owner_type,owner_id,agent_scope_id,period_start). For individual Agent free funds, agent_scope_id=agentId; for others 0. Shared corporate pool remains its own FundingAccount row with an independent hard cap, not duplicated per person.
+2. All money rows keep balance_points DECIMAL(20,6) and reserved_points DECIMAL(20,6) with **available = balance − reserved >=0**. On reserve, increment reserved. On confirmed settlement, decrement reserved by the original held amount and decrement balance by actual charge. On proven zero-cost cancellation, only decrement reserved. Never use both balance decrement and reserved increment during reservation under this convention.
+3. Grant uniqueness: grant(id, grant_operation_key NOT NULL UNIQUE, approval_id NULL, issuer_team_id, recipient_employee_id, issued_points, balance_points, reserved_points, expires_at). A proactively issued Grant has no approval_id but always has a unique grant_operation_key. MySQL optional approval_id may be unique for the approved-request path. Grant and TeamPool debit/ledger/outbox commit together.
+4. usage_settlement must capture **both** internal_points_price_version_id and provider_price_version_id plus provider_currency, input/output/cache token categories, computed internal points and provider estimate. A singular ambiguous price_version_id column is insufficient and superseded.
+5. Invocation idempotency unique(agent_id,employee_id,idempotency_key) with idempotency_key NOT NULL, immutable payload_hash, state and provider_attempt_count. Must not reissue paid Provider request after a started attempt with uncertain status.
+6. Model price versions have explicit effective time, non-overlap enforcement in application transaction under a Model/Provider write lock, immutable when active or referenced; use separate point and Provider price kinds and currency. Never silently recalculate historical consumption from current prices.
+7. finops_daily_usage groups Employee and employee_primary_team_snapshot_id, Agent, Model, Deployment, date and provider currency; finance decimals and internal points are separate; group uniqueness must use all nonnull normalized dimensions and an event receipt idempotency guard. Team issuance projection groups issuer Team and grant issuance day, with an independent idempotent event source. There is no combined company 'Team Grants + Employee Usage' cost.
+8. Outbox rows require event_id UNIQUE, schema_version, aggregate reference, safe JSON payload, status/attempts/next_attempt_at; RabbitMQ acknowledgments alone are not a database ledger commit. Event contains no raw prompt or secret.
+
+The physical DDL is introduced only in the appropriate Phase via Flyway. This specification is a design baseline, not an already migrated database schema. Index cardinality, price validity edge cases, grant expiry while funds remain reserved and financial outlier handling must be tested before the relevant Phase can be signed off.
