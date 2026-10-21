@@ -15,7 +15,7 @@ AIGate 是**企业内部已有 Agent 的 AI 模型接入与治理平台**：统�
 | 阅读顺序 | 文档 | 主要内容 |
 |---|---|---|
 | 1 | [业务与规则](01-业务与规则.md) | 产品定位、角色、完整需求、周积分、Team 发放、保底、SSE、治理、FinOps |
-| 2 | [架构与技术](02-架构与技术.md) | 模块化单体、五领域职责、Redis/RabbitMQ/SSE、架构升级的收益和代价 |
+| 2 | [架构与技术](02-架构与技术.md) | 从 P1 直接采用 Gateway+Core 微服务，P11 增加 FinOps；五领域边界、ADR、Redis/RabbitMQ/SSE |
 | 3 | [数据与接口](03-数据与接口.md) | 领域对象、数据库字段/索引、账务事务、身份安全、HTTP/SSE API |
 | 4 | [阶段与任务](04-阶段与任务.md) | 从零重做的 P0～P12、具体任务、逐阶段验收和工作包交付规则 |
 | 5 | [测试与验收](05-测试与验收.md) | 测试矩阵、并发/幂等、CI、SSE/MQ 故障、压测与观测 |
@@ -60,7 +60,7 @@ cd AIGate-Rebuild
 
 ### P0-D14 技术方案已确认（2026-10-21）
 
-用户已确认当前推荐技术路线。**TECHNOLOGY CHOICES APPROVED**：Java21、模块化单体、Spring Boot4.1.1/MVC/Security、MyBatis-Plus Boot4 Starter 3.5.17、MySQL8.4 LTS/Flyway、Redis+Lua、RabbitMQ+Spring AMQP（P11）、Maven Wrapper/Compose/Testcontainers/CI、P7 MVC SSE 与 Provider Adapter、分阶段观测。RabbitMQ 不再作为“还需选择哪种 MQ”的开放项。决定/替代/复杂度和官方资料见《02-架构与技术》D14/ADR-007；验收见《05-测试与验收》TECH-01～TECH-12，状态同步《06-进度与协作》。
+用户已确认的 D14 基础栈已由 D15 的直接微服务部署决策补充。**TECHNOLOGY CHOICES APPROVED**：Java21、Gateway+Core（P1）+FinOps（P11）、Spring Boot4.1.1/MVC/Security、MyBatis-Plus Boot4 Starter 3.5.17、MySQL8.4 LTS/Flyway、Redis+Lua、RabbitMQ+Spring AMQP（P11）、Maven Wrapper/Compose/Testcontainers/CI、P7 MVC SSE 与 Provider Adapter、分阶段观测。RabbitMQ 不再作为“还需选择哪种 MQ”的开放项。决定/替代/复杂度和官方资料见《02-架构与技术》D14/ADR-007；验收见《05-测试与验收》TECH-01～TECH-12，状态同步《06-进度与协作》。
 
 **并非 ENGINEERING VERIFIED**：新仓库仍无 Java 工程及实测迁移/Redis/MQ/构建，通过官方发布信息只能确定选型基线，无法证明项目依赖组合已经跑通。具体 Maven Wrapper、镜像 patch/digest 和实测结果待技术门禁核验；**P0 设计未冻结、P1～P12 未启动**。
 
