@@ -1,48 +1,43 @@
-# AIGate 文档目录
+# AIGate · 项目设计总览
 
-## 项目定位
+> **当前阶段：P0 设计与审查；新项目尚未开始编码。**
+>
+> 新仓库：[Felix0410/AIGate-Rebuild](https://github.com/Felix0410/AIGate-Rebuild)。旧 AIGate 仓库只作历史备份，不再是新项目的事实来源。
 
-AIGate 是企业内部 AI 模型统一接入与治理平台。现有 Agent 通过网关访问获准的模型。平台负责身份认证、权限、调用计量、员工积分、团队预算、限流、流式响应、安全策略和成本分析。
+## 项目是做什么的？
 
-## 文档索引
+AIGate 是**企业内部已有 Agent 的 AI 模型接入与治理平台**：统一员工和 Agent 双身份认证、模型权限、Token/积分额度、Team 发放、限流与企业保底、SSE 模型路由、安全合规和 FinOps 成本分析。
 
-- 00-overview.md：业务目标与边界。
-- 01-requirements.md：完整功能清单。
-- 02-business-rules.md：计费和访问控制规则。
-- 03-architecture.md：总体技术架构。
-- 04-technology.md：技术栈及选型依据。
-- 05-domain-model.md：领域实体和不变量。
-- 06-database-design.md：数据库结构和事务。
-- 07-api-design.md：HTTP 接口和流式协议。
-- 08-module-design.md：Java 模块划分。
-- 09-roadmap.md：阶段路线及验收。
-- 10-task-contracts.md：编码执行合同。
-- 11-testing-operations.md：测试与运维。
-- 12-progress.md：项目进度。
-- 13-knowledge-interview.md：技术学习与面试资料。
-- 14-local-ai-protocol.md：本地编码 AI 工作协议。
-- adr/：架构决策记录。
+项目不开发 Agent 工作流或模型训练。用户重点学习实际业务、Java 后端技术和架构设计；代码由本地 AI 根据我事先确定的详细任务快速实施。
 
-## 开发原则
+## 七份核心文档
 
-设计文档是权威来源。实施工作由本地编码 AI 按确定的工作包完成；它不自行改变产品需求或选择新技术。先实现最小可运行主流程，再逐步扩展并用测试验证。每个阶段完成后，经过检查才进入下一阶段。
+| 阅读顺序 | 文档 | 主要内容 |
+|---|---|---|
+| 1 | [业务与规则](01-业务与规则.md) | 产品定位、角色、完整需求、周积分、Team 发放、保底、SSE、治理、FinOps |
+| 2 | [架构与技术](02-架构与技术.md) | 模块化单体、五领域职责、Redis/RabbitMQ/SSE、架构升级的收益和代价 |
+| 3 | [数据与接口](03-数据与接口.md) | 领域对象、数据库字段/索引、账务事务、身份安全、HTTP/SSE API |
+| 4 | [阶段与任务](04-阶段与任务.md) | 从零重做的 P0～P12、具体任务、逐阶段验收和工作包交付规则 |
+| 5 | [测试与验收](05-测试与验收.md) | 测试矩阵、并发/幂等、CI、SSE/MQ 故障、压测与观测 |
+| 6 | [进度与协作](06-进度与协作.md) | 当前进度、已定/未定决策、ADR 摘要、本地 AI 规范、学习与面试路线 |
 
-目前所有文档描述的是新项目目标，并不代表功能已经实现。
+加上本索引文件，**整个 docs 仅保留 7 份中文 Markdown**。不再单独维护十几份需求、架构、ADR、Progress 和面试笔记。
 
-## 新仓库迁移状态（2026-10-21）
+## 文档如何使用
 
-- 当前新仓库 main 全部文件位于 docs/；旧仓库 `Felix0410/AIGate` 保留原样作归档。
-- 已补充 **06a-billing-transactions.md**（资金预留/结算/故障时序）、**07a-contract-details.md**（运行时协议）、**10a-acceptance-matrix.md**（安全/资金/SSE/MQ 集成验收）、**15-implementation-defaults.md**（可执行技术默认），以及 **16-security-auth.md**（管理引导和双凭证安全合同）、**17-admin-api-contract.md**（管理 API 路径及 DTO）。后续增加文档均由总控管理。
-- 当前为 **P0 完整设计草案，未正式冻结**。虽然业务领域和大多数实现约束已设计，P1 开发仍然 **NOT AUTHORIZED**：正式编码前需检查接口与数据约束一致性、把 P1 工作包拆成足够精细的单次执行任务并经用户批准。
-- 本地 AI 不得因阅读到整个 P0～P12 全量蓝图而一次性实施所有 Phase。用户学习重点为理解业务、技术原理、架构演进和测试证据，代码可由本地 AI 快速实现。
+产品规则与需求以《01-业务与规则》为准；实现边界以《02-架构与技术》和《03-数据与接口》为准；阶段任务以《04-阶段与任务》为准；质量门禁与进度以《05-测试与验收》《06-进度与协作》为准。
 
-### 索引补充
+**原则：业务问题 → 最简单可运行 → 打通主流程 → 测试验证 → 发现真实问题 → 再按需引入技术。** 文档先做完整设计，但代码仍按一个 Phase、一个工作包执行；本地 AI 不修改 docs、不得自行增加复杂架构。每个 Phase 结束需要 Review、测试、架构复盘、技术债及用户批准，才能前进。
 
-| 文档 | 内容 |
-|---|---|
-| 06a-billing-transactions.md | 关键账务事务、费用预留/结算和待核对 |
-| 07a-contract-details.md | Provider Runtime DTO、SSE 与事件数据结构 |
-| 10a-acceptance-matrix.md | 各 Phase 不变量与失败用例矩阵 |
-| 15-implementation-defaults.md | 业务已确认事项以外的实施默认 |
-| 16-security-auth.md | 管理身份、Agent+Employee 双身份及角色授权合同 |
-| 17-admin-api-contract.md | 管理 API 路径、请求/响应 DTO 和权限 |
+## 当前进度
+
+P0 文档已整理，仍需整体设计核对及用户确认。P1～P12 **均未启动**，没有新 Java 代码、数据库迁移或 CI 可作为已完成证据。所有公司具体预算、模型价格、真实供应商密钥均不编造。
+
+## 本地准备
+
+```bash
+git clone https://github.com/Felix0410/AIGate-Rebuild.git
+cd AIGate-Rebuild
+```
+
+在 P1 开始前只有 docs/ 是正常的。开始编码后，我负责分解任务与技术教学，本地 AI 负责代码、测试、迁移和运行配置。
