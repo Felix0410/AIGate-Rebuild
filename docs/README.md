@@ -63,3 +63,15 @@ cd AIGate-Rebuild
 用户已确认当前推荐技术路线。**TECHNOLOGY CHOICES APPROVED**：Java21、模块化单体、Spring Boot4.1.1/MVC/Security、MyBatis-Plus Boot4 Starter 3.5.17、MySQL8.4 LTS/Flyway、Redis+Lua、RabbitMQ+Spring AMQP（P11）、Maven Wrapper/Compose/Testcontainers/CI、P7 MVC SSE 与 Provider Adapter、分阶段观测。RabbitMQ 不再作为“还需选择哪种 MQ”的开放项。决定/替代/复杂度和官方资料见《02-架构与技术》D14/ADR-007；验收见《05-测试与验收》TECH-01～TECH-12，状态同步《06-进度与协作》。
 
 **并非 ENGINEERING VERIFIED**：新仓库仍无 Java 工程及实测迁移/Redis/MQ/构建，通过官方发布信息只能确定选型基线，无法证明项目依赖组合已经跑通。具体 Maven Wrapper、镜像 patch/digest 和实测结果待技术门禁核验；**P0 设计未冻结、P1～P12 未启动**。
+
+### P0-D15：从 P1 起直接三部署边界微服务（2026-10-21）
+
+**架构已获用户明确批准，取代以前“单体起步、P12 条件式拆微服务”的提案。** 不是五业务领域各开一个服务：**P1 两个独立启动进程** aigate-gateway（Spring Cloud Gateway Server WebMVC 的管理 HTTP 反向代理入口，P7 加 Runtime/Redis/SSE/Provider）和 aigate-core（Identity/Catalog/Governance/Quota+Billing/Invocation 幂等与唯一派发意图，core_db 的全部安全与双预算在同一 MySQL 事务）；**P11 增加 aigate-finops**（RabbitMQ/Inbox、只读聚合、自有 finops_db）。
+
+拆分理由：Gateway 的长 SSE 与外部 Provider 网络 I/O 和 Core 的短 MySQL 强一致事务具备不同的资源、扩容与故障要求；FinOps 为可异步恢复的统计负载。核心安全+双预算不能直接拆到五个独立数据库，否则必须面对真实分布式事务/授权撤销的不确定性。P1 起验证两个进程/真实 HTTP、故障边界，P7 完整 Remote Permit，P11 验证真实独立统计。
+
+技术增量：Spring Cloud 2025.1.2 + Spring Cloud Gateway Server WebMVC Starter（仅 Gateway），Gateway→Core 采用受控 Spring RestClient 内部 HTTP RPC；Nacos/OpenFeign/K8s 不因“微服务”名称必装。官方支持关系不是本仓库实际构建证据。
+
+主要合同：业务《01》D15；ADR-008 与七问《02》D15；core_db/finops_db、内部远程派发《03》D15；修订 P1～P12《04》D15；MSC-01～MSC-24《05》D15；实际进度/门禁《06》D15。
+
+**状态：ARCHITECTURE CHOICE APPROVED / P0 DETAILED DESIGN IN PROGRESS / P1 NOT STARTED。** 目前只有文档，未创建/部署任何微服务项目源码，也没有运行构建或测试。
