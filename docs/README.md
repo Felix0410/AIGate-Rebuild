@@ -143,3 +143,7 @@ cd AIGate-Rebuild
 在全部61张表 SQL设计文本之后继续收敛接口：《03》D42给出Gateway↔Core六类内部RPC的Schema V1、JSON与三种ACK丢失处理，并修正为Core独占HMAC-SHA256原业务摘要（Gateway不持Core HMACKey、不上传该摘要）；D43对P9 V9新增Invocation最终降级Model/Policy/资金来源持久快照、P10 V10新增紧急Authorization/Task引用。P11新增FinOps按eventId受信补取Core Outbox安全事件的内部只读协议，与D41不超过5000个单快照源Manifest联合保证缺口不被当0。
 
 旧口径修正：P1公开错误Envelope按D33；旧D16 Runtime JSON命名不再实现并行别名；FinOps报表统一Gateway→Core鉴权→FinOps私有查询。对应的《05》FZAPI/FZSQL/FZRPC验收、《04》专项任务、《06》进度已同步。**SQL/DTO均为尚待MySQL、Gateway/Core、RabbitMQ集成验证的设计，不代表P0已冻结或任何Phase开始编码。**
+
+### P0-D44：Gateway公开路由注册白名单（2026-10-22）
+
+《03-数据与接口》D44建立P1～P12统一公开路由表：P1 Bootstrap和组织管理只有Gateway→Core、P2-P6逐阶段扩大管理资源、P7首开ChatCompletion/Invocation、P9 LOW/P10紧急需各自批准、P11所有FinOps外部请求仍先走Core当前RBAC/TypedScope、P12只开放受限运维管理。D16旧Gateway直连FinOps与旧RPC字段不再作为可实现合同。D43补充P10 EMERGENCY_POINTS的V10资金类型CHECK显式升级，避免紧急业务时数据库拒绝保存历史资金类型。验收见《05》FZROUTE-01～07，均NOT RUN；P0尚未冻结。
