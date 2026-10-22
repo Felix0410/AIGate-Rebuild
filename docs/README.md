@@ -109,3 +109,9 @@ cd AIGate-Rebuild
 详见《01-业务与规则》D19、《02-架构与技术》D19/ADR-012、《03-数据与接口》D19 完整 SQL+API、《04-阶段与任务》P2-T01～P2-T07、《05-测试与验收》P2-01～P2-40、《06-进度与协作》D19。
 
 **真实进度**：D19 PROPOSED；全部新测试 NOT RUN、没有新增 Java/Flyway/Compose 工程源码，仍在 P0 设计，不自动启动 P1/P2；下一步 P3 Catalog 设计。
+
+### P0-D20：P3 模型目录、双价格版本和 Agent-Model 白名单（2026-10-22）
+
+继 D19/P2 双运行 Key 与 Employee-Agent ACL 后，D20 设计 P3 Catalog：Provider/LogicalModel/Deployment 独立身份、V3 七张 Core MySQL 表、统一 Model POINTS 版本价与按第三方 Deployment 原币种采购价、Core AES-GCM 供应商密钥、Agent-Model 真白名单。只有同时存在 P2 Employee-Agent 与 P3 Agent-Model 授权，未来 Runtime 才有模型使用资格。P3 只实现管理及可信 eligibility，不执行供应商 HTTP 或资金。
+
+细节见《01-业务与规则》D20、《02-架构与技术》D20/ADR-013、《03-数据与接口》D20 表/API、《04-阶段与任务》P3-T01～T07、《05-测试与验收》P3-01～P3-32、《06-进度与协作》D20。**D20 PROPOSED / NOT RUN；P0 尚未总冻结，P1～P3 NOT STARTED。**
