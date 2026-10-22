@@ -91,3 +91,13 @@ cd AIGate-Rebuild
 详见《01-业务与规则》D17、《02-架构与技术》D17/ADR-010、《03-数据与接口》D17（权限/API/事实归属）、《04-阶段与任务》P11-FINOPS-ACCESS、《05-测试与验收》FNA-01～FNA-20 与《06-进度与协作》D17。
 
 **D17 状态：PROPOSED/NOT FROZEN，FNA-01～20 NOT RUN；P0 仍未全部冻结，P1 NOT STARTED。**
+
+### P0-D18：P1 双微服务的工程合同与唯一 Bootstrap 初始化（2026-10-22）
+
+**新增 ADR-011**：P1 在一个 Git 仓库创建 Maven 父工程 + aigate-contracts 普通 DTO Jar + aigate-core 与 aigate-gateway 两个真实可执行 Spring Boot 应用 + aigate-e2e-tests。版本与依赖提案明确为 Java21、Boot4.1.1、Cloud2025.1.2 Gateway Server WebMVC、MyBatis-Plus Boot4 3.5.17、MySQL8.4/Flyway、Redis8.4、Maven Wrapper3.9.16、Testcontainers2，Gateway 不引 Core 数据库模块。
+
+**P1 重要安全修订**：D12 原来 5 张管理表增加 bootstrap_control 第 6 张单例表，MySQL 行锁保证首次 Team+Employee+GLOBAL Admin+mgt_ Key+审计只能提交一次；新增两个运维 Bootstrap API 的明确定义，普通管理仍 15 个。P1 入口只有 Gateway 对外，Core 只通过内部 DNS/网络受访问限制并独立验权限，Redis 不处理管理 RBAC。
+
+七文档具体内容：《01》D18 业务边界、《02》D18/ADR-011 多模块和版本决策、《03》D18 六表/路由/配置、《04》D18 P1-T01～T06、《05》D18 P1-25～P1-42、《06》D18 决策进度与风险清单。
+
+**当前真实状态**：D18 是设计提案，尚未创建 Java 工程、未运行 Maven/Flyway/Compose/Testcontainers，镜像 digest 与安全/兼容门禁待核验；P0 未冻结，P1 未开始。
