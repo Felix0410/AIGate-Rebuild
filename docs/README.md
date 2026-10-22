@@ -163,3 +163,8 @@ cd AIGate-Rebuild
 《03》D48/D49把P4～P12所有阶段公开管理/Runtime/FinOps/运维路径汇为逐Method/DTO/权限/资金失败字段目录，仍保留P6内置RuleRegistry、P7真实Provider账务证据/Redis Lua、P11事件/凭证、P12运营状态的专门设计阻塞。D50发现并修复预检/派发HMAC在Core密钥轮换及P9/P10新字段扩展下的版本空白：规范Core V7 Invocation SQL增加 \`canonical_schema_version\`、\`payload_hmac_key_id\`，P7/v1、P9/v2、P10/v3严格升级；《02》ADR-027、《04》任务、《05》新增D50-01～28全未运行测试、《06》进度同步。数据库仍是**Core54 + FinOps7共61张设计表**，没有真的迁移。
 
 **设计不是运行证据**。P0目前继续DESIGN IN PROGRESS/NOT FROZEN；P1～P12没有编码/真实测试。接下来集中完成P6 RuleRegistry、Provider使用量/费用上界、Redis Lua、MQ事件Schema、最终SQL和API交叉审查，以及最小MySQL/Maven/Boot4 GatewayMVC兼容PoC，才可申请P0最终冻结。
+
+
+### P0-D51：P6 Governance内置安全规则闭合候选（2026-10-22）
+
+《03》D51把P6无明确定义的RuleV1变为封闭内置检测器和出站矩阵，禁止执行AI自行采用任意脚本/未审核正则或第三方DLP；《02》ADR-028记选型原因与误报/漏报代价，《04》《05》《06》同步P6任务、9个NOT RUN用例和进度。**仍是P0文档方案，不是代码或测试通过**；需真实公司敏感类别/Provider地域审批和最终用户冻结。
