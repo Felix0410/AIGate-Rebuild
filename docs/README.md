@@ -147,3 +147,12 @@ cd AIGate-Rebuild
 ### P0-D44：Gateway公开路由注册白名单（2026-10-22）
 
 《03-数据与接口》D44建立P1～P12统一公开路由表：P1 Bootstrap和组织管理只有Gateway→Core、P2-P6逐阶段扩大管理资源、P7首开ChatCompletion/Invocation、P9 LOW/P10紧急需各自批准、P11所有FinOps外部请求仍先走Core当前RBAC/TypedScope、P12只开放受限运维管理。D16旧Gateway直连FinOps与旧RPC字段不再作为可实现合同。《02》新增ADR-025解释为什么Core独占HMAC安全密钥和Gateway严格阶段化路由；D43补充P10 EMERGENCY_POINTS的V10资金类型CHECK显式升级，避免紧急业务时数据库拒绝保存历史资金类型。验收见《05》FZROUTE-01～07，均NOT RUN；P0尚未冻结。
+
+
+### P0-D45～D47：P1～P3公开 DTO、安全 JSON Schema 与冻结门禁纠偏（2026-10-22）
+
+《03-数据与接口》新增 **D45** 的 P1 17条（15管理+2受控Bootstrap）、P2 15条及 P3 Catalog 公开接口 DTO/HTTP/字段/null/幂等/分页/错误合同，以及 **D46** Provider HostPolicy/Model Capability 封闭 v1 JSON Schema、ProviderCredential 在 **V3原表**增加签发者/Idempotency-Key/HMAC收据四列及唯一约束。Core仍设计54表、FinOps7表，合计61表；**规范SQL文本已修改，但真MySQL尚未执行**。
+
+《02-架构与技术》新增 **ADR-026**：P0 必须先全量设计+最小基础兼容PoC；真正的 P7 SSE/Redis/Provider、P11 RabbitMQ/FinOps、P12 多Gateway/故障集成必须在对应 Phase 完成，不能在编码前强制这些尚不存在的系统先通过测试。《04》已更新 FZ-01～06 门禁解释与 P1-T01～T06执行清单；《05》新增 D47-API01～23 测试设计（全部 NOT RUN）；《06》同步真实状态。
+
+**状态仍是 P0 DESIGN IN PROGRESS / NOT FROZEN；P1～P12未启动。** 当前最大文本缺口是 P4～P12 每API字段级规范化和跨文档复核，此外真实 Maven/Boot/Gateway/MySQL Flyway PoC无PASS证据；不应把D45～47文档进展误当通过构建/已发布应用。
