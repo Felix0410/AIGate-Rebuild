@@ -115,3 +115,11 @@ cd AIGate-Rebuild
 继 D19/P2 双运行 Key 与 Employee-Agent ACL 后，D20 设计 P3 Catalog：Provider/LogicalModel/Deployment 独立身份、V3 七张 Core MySQL 表、统一 Model POINTS 版本价与按第三方 Deployment 原币种采购价、Core AES-GCM 供应商密钥、Agent-Model 真白名单。只有同时存在 P2 Employee-Agent 与 P3 Agent-Model 授权，未来 Runtime 才有模型使用资格。P3 只实现管理及可信 eligibility，不执行供应商 HTTP 或资金。
 
 细节见《01-业务与规则》D20、《02-架构与技术》D20/ADR-013、《03-数据与接口》D20 表/API、《04-阶段与任务》P3-T01～T07、《05-测试与验收》P3-01～P3-32、《06-进度与协作》D20。**D20 PROPOSED / NOT RUN；P0 尚未总冻结，P1～P3 NOT STARTED。**
+
+### P0-D21～D24：一次设计 P4～P7 四个核心业务块（2026-10-22）
+
+按真实业务依赖一次完成四块**设计提案**，不启动编码。**P4/D21** 为 Core 增普通 Agent周/Employee周 POINTS、公司原币种总月预算/NORMAL份额、风险预留/可信用量结算/待对账/不可变 Ledger+Outbox（V4十表，P7 前无需假 Invocation）；**P5/D22** 为 TeamPool→Grant 发行即扣发行 Team、员工按 FEFO 使用、到期不退与发行/消费事实分离（V5三表）；**P6/D23** 为企业四级数据治理、不可自审批政策版本、Agent/Provider/地域/Deployment 出站授权、前检+最终 DB 复核及 Prompt 最小隐私（V6七类表）；**P7/D24** 首次 Gateway JSON+SSE+Redis Lua、Core 双身份/双 ACL/治理/预算同库原子签发唯一 Permit、真实 Provider 只能首次明确授权发送一次、可信 usage/未知费用与幂等结果报告（V7五表）。
+
+**为什么要这样分**：P4 的双账必须先可靠，P5 才扩展第三来源，P6 安全先于第一次外部收费，P7 最后连接真正的网络调用；不为了微服务拆分钱或越过完整权限/治理。技术/架构取舍记录于《02-架构与技术》**ADR-014～017**；详细对象与接口在《03-数据与接口》D21～D24；P4～P7 全工作包见《04-阶段与任务》；《05-测试与验收》新增 **BIZP4-01～12 / BIZP5-01～12 / BIZP6-01～12 / BIZP7-01～16 共52个 NOT RUN** 场景；《06-进度与协作》同步事实。
+
+**当前状态**：设计已记录但 V4～V7 全量 Flyway SQL、所有 JSON fixture、真实兼容/多进程测试未最终冻结；P0 仍未 FROZEN、P1～P12 NOT STARTED。
