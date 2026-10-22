@@ -156,3 +156,10 @@ cd AIGate-Rebuild
 《02-架构与技术》新增 **ADR-026**：P0 必须先全量设计+最小基础兼容PoC；真正的 P7 SSE/Redis/Provider、P11 RabbitMQ/FinOps、P12 多Gateway/故障集成必须在对应 Phase 完成，不能在编码前强制这些尚不存在的系统先通过测试。《04》已更新 FZ-01～06 门禁解释与 P1-T01～T06执行清单；《05》新增 D47-API01～23 测试设计（全部 NOT RUN）；《06》同步真实状态。
 
 **状态仍是 P0 DESIGN IN PROGRESS / NOT FROZEN；P1～P12未启动。** 当前最大文本缺口是 P4～P12 每API字段级规范化和跨文档复核，此外真实 Maven/Boot/Gateway/MySQL Flyway PoC无PASS证据；不应把D45～47文档进展误当通过构建/已发布应用。
+
+
+### P0-D48～D50：P4～P12公开API字段化与请求HMAC版本安全修补（2026-10-22）
+
+《03》D48/D49把P4～P12所有阶段公开管理/Runtime/FinOps/运维路径汇为逐Method/DTO/权限/资金失败字段目录，仍保留P6内置RuleRegistry、P7真实Provider账务证据/Redis Lua、P11事件/凭证、P12运营状态的专门设计阻塞。D50发现并修复预检/派发HMAC在Core密钥轮换及P9/P10新字段扩展下的版本空白：规范Core V7 Invocation SQL增加 \`canonical_schema_version\`、\`payload_hmac_key_id\`，P7/v1、P9/v2、P10/v3严格升级；《02》ADR-027、《04》任务、《05》新增D50-01～28全未运行测试、《06》进度同步。数据库仍是**Core54 + FinOps7共61张设计表**，没有真的迁移。
+
+**设计不是运行证据**。P0目前继续DESIGN IN PROGRESS/NOT FROZEN；P1～P12没有编码/真实测试。接下来集中完成P6 RuleRegistry、Provider使用量/费用上界、Redis Lua、MQ事件Schema、最终SQL和API交叉审查，以及最小MySQL/Maven/Boot4 GatewayMVC兼容PoC，才可申请P0最终冻结。
