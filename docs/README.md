@@ -75,3 +75,11 @@ cd AIGate-Rebuild
 主要合同：业务《01》D15；ADR-008 与七问《02》D15；core_db/finops_db、内部远程派发《03》D15；修订 P1～P12《04》D15；MSC-01～MSC-24《05》D15；实际进度/门禁《06》D15。
 
 **状态：ARCHITECTURE CHOICE APPROVED / P0 DETAILED DESIGN IN PROGRESS / P1 NOT STARTED。** 目前只有文档，未创建/部署任何微服务项目源码，也没有运行构建或测试。
+
+### P0-D16：Gateway/Core 安全通信、唯一 Permit 与 Provider Secret（2026-10-22）
+
+微服务直接拆分后，新增内部通信设计：P1 管理 API 从 Gateway 安全路由至 Core，Core 自行做 mgt_ 授权；/internal 使用 svc_ 服务身份凭证但不代替运行时 agk_+empk_ 和当前 ACL/治理/资金校验；生产 Gateway→Core 使用可信 TLS。P7 Core 在同一 MySQL 事务原子预留双账和写唯一 DispatchPermit/Intent，Gateway 只能在首次 permit 明确成功且 lease 有效后对 Provider 发起一次执行；RPC 超时查状态不重新发送。Provider Key 由 Core 加密保存、Gateway 按真实 Permit 受控临时获取，结果报告可幂等重复而 Provider 请求不可盲重试。
+
+详见《02-架构与技术》D16/ADR-009、《03-数据与接口》D16 运行时 DTO、《04-阶段与任务》P1-EDGE/P3-CREDS/P7-RPC、《05-测试与验收》RPC-01～RPC-20、《01-业务与规则》D16，真实进度在《06-进度与协作》D16。
+
+**状态**：D16 PROPOSED/NOT FROZEN；P0 仍在完善详细合同；所有 RPC 测试 NOT RUN；没有开始 P1 编码。
