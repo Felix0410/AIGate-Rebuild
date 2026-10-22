@@ -101,3 +101,11 @@ cd AIGate-Rebuild
 七文档具体内容：《01》D18 业务边界、《02》D18/ADR-011 多模块和版本决策、《03》D18 六表/路由/配置、《04》D18 P1-T01～T06、《05》D18 P1-25～P1-42、《06》D18 决策进度与风险清单。
 
 **当前真实状态**：D18 是设计提案，尚未创建 Java 工程、未运行 Maven/Flyway/Compose/Testcontainers，镜像 digest 与安全/兼容门禁待核验；P0 未冻结，P1 未开始。
+
+### P0-D19：P2 Agent、双运行 Key 和员工授权业务详细设计（2026-10-22）
+
+从已批准的双服务架构转向逐业务块设计。本轮完成 **P2 的 Agent/Application 1:1 纳管、agk_ Agent Key、empk_ Employee Runtime Key、Employee-Agent ACL** 合同；复用 P1 已有 Employee 管理身份、不提前建 P3 Model 或 P7 真实模型执行。Core Flyway V2 规划四张新增表（agent、agent_api_key、employee_credential、employee_agent_permission，P2 总共10表），15个新的管理 API 与仅 svc_+双 Key 允许的 Core /internal/v1/runtime-identities/verify。Key 随机32字节、HMAC不同用途 Pepper、只在首次签发显示、受控轮换24h/每Owner最多两把可认证 Key，当前默认仅 GLOBAL PLATFORM_ADMIN 可管理。
+
+详见《01-业务与规则》D19、《02-架构与技术》D19/ADR-012、《03-数据与接口》D19 完整 SQL+API、《04-阶段与任务》P2-T01～P2-T07、《05-测试与验收》P2-01～P2-40、《06-进度与协作》D19。
+
+**真实进度**：D19 PROPOSED；全部新测试 NOT RUN、没有新增 Java/Flyway/Compose 工程源码，仍在 P0 设计，不自动启动 P1/P2；下一步 P3 Catalog 设计。
