@@ -83,3 +83,11 @@ cd AIGate-Rebuild
 详见《02-架构与技术》D16/ADR-009、《03-数据与接口》D16 运行时 DTO、《04-阶段与任务》P1-EDGE/P3-CREDS/P7-RPC、《05-测试与验收》RPC-01～RPC-20、《01-业务与规则》D16，真实进度在《06-进度与协作》D16。
 
 **状态**：D16 PROPOSED/NOT FROZEN；P0 仍在完善详细合同；所有 RPC 测试 NOT RUN；没有开始 P1 编码。
+
+### P0-D17：FinOps 独立服务的角色权限和费用事实（2026-10-22）
+
+在 D15 真实三服务部署、D16 内部服务认证的基础上，明确 **P11 外部 /api/v1/finops/** 统一 Gateway→Core→FinOps**：Core 验 mgt_、当前 RBAC/Team/Employee，产生最小允许的 TEAM/COMPANY/SELF typed Scope；FinOps 只认 Core 专用受信 service credential 并按 Scope 对自己的 finops_db 查询，不能访问 core_db 或信任客户端任意 teamId/employeeId。Core 的实时 pending-exposure/outbox-status 保留在 Core，不由异步财务统计近似推算。自部署实际运营费用凭证/草稿/另一管理员审批在 FinOps 自有数据库单事务提交，按真实原币种/完整月服务期统计，不造逐日费用。跨 Team Grant 与历史 Employee Team attribution 不因现时调动被改写。
+
+详见《01-业务与规则》D17、《02-架构与技术》D17/ADR-010、《03-数据与接口》D17（权限/API/事实归属）、《04-阶段与任务》P11-FINOPS-ACCESS、《05-测试与验收》FNA-01～FNA-20 与《06-进度与协作》D17。
+
+**D17 状态：PROPOSED/NOT FROZEN，FNA-01～20 NOT RUN；P0 仍未全部冻结，P1 NOT STARTED。**
