@@ -137,3 +137,9 @@ cd AIGate-Rebuild
 继续从业务设计转为精确工程合同：《03-数据与接口》D30给出Core P1 V1完整六表建表SQL；D19 P2已有V2四表完整SQL；D31 P3 V3七表、D32 P4 V4十表、D34 P5 V5三表、D35 P6 V6七表及角色约束迁移、D36 P7 V7五表、D37 P8 V8两表、D38 P9 V9五表、D39 P10 V10五表；D40是**独立finops_db的V1七表**。合计**Core54表+FinOps7表=61张SQL设计表**，P12不提前造无业务需要的表。D33明确API失败/幂等/六类受信RPC/锁序及所有迁移归属；D41补FinOps ≤5000条Outbox单次一致快照源manifest（超限不伪报FRESH）。
 
 重要架构修订见《02-架构与技术》ADR-023（价格版本当前指针、真实Provider超额、Outbox提交顺序）和ADR-024（按buildId隔离双版本FinOps重建），《04-阶段与任务》P0 FZ-01～FZ-06与《05-测试与验收》FZSQL/FZAPI/FZOPS验收门禁。《06-进度与协作》更新真实状态。**61张表目前存在于docs的SQL code block，不是已创建的数据库**；没有Maven/Compose/MySQL/Testcontainers真实运行，所有SQL仍标待验证。业务架构已经覆盖P1～P12，但P0尚未冻结、P1没有开始。
+
+### P0-D42～D43：P7内网RPC JSON与跨阶段持久化/事件恢复（2026-10-22）
+
+在全部61张表 SQL设计文本之后继续收敛接口：《03》D42给出Gateway↔Core六类内部RPC的Schema V1、JSON与三种ACK丢失处理，并修正为Core独占HMAC-SHA256原业务摘要（Gateway不持Core HMACKey、不上传该摘要）；D43对P9 V9新增Invocation最终降级Model/Policy/资金来源持久快照、P10 V10新增紧急Authorization/Task引用。P11新增FinOps按eventId受信补取Core Outbox安全事件的内部只读协议，与D41不超过5000个单快照源Manifest联合保证缺口不被当0。
+
+旧口径修正：P1公开错误Envelope按D33；旧D16 Runtime JSON命名不再实现并行别名；FinOps报表统一Gateway→Core鉴权→FinOps私有查询。对应的《05》FZAPI/FZSQL/FZRPC验收、《04》专项任务、《06》进度已同步。**SQL/DTO均为尚待MySQL、Gateway/Core、RabbitMQ集成验证的设计，不代表P0已冻结或任何Phase开始编码。**
