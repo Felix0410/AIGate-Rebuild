@@ -146,4 +146,4 @@ cd AIGate-Rebuild
 
 ### P0-D44：Gateway公开路由注册白名单（2026-10-22）
 
-《03-数据与接口》D44建立P1～P12统一公开路由表：P1 Bootstrap和组织管理只有Gateway→Core、P2-P6逐阶段扩大管理资源、P7首开ChatCompletion/Invocation、P9 LOW/P10紧急需各自批准、P11所有FinOps外部请求仍先走Core当前RBAC/TypedScope、P12只开放受限运维管理。D16旧Gateway直连FinOps与旧RPC字段不再作为可实现合同。D43补充P10 EMERGENCY_POINTS的V10资金类型CHECK显式升级，避免紧急业务时数据库拒绝保存历史资金类型。验收见《05》FZROUTE-01～07，均NOT RUN；P0尚未冻结。
+《03-数据与接口》D44建立P1～P12统一公开路由表：P1 Bootstrap和组织管理只有Gateway→Core、P2-P6逐阶段扩大管理资源、P7首开ChatCompletion/Invocation、P9 LOW/P10紧急需各自批准、P11所有FinOps外部请求仍先走Core当前RBAC/TypedScope、P12只开放受限运维管理。D16旧Gateway直连FinOps与旧RPC字段不再作为可实现合同。《02》新增ADR-025解释为什么Core独占HMAC安全密钥和Gateway严格阶段化路由；D43补充P10 EMERGENCY_POINTS的V10资金类型CHECK显式升级，避免紧急业务时数据库拒绝保存历史资金类型。验收见《05》FZROUTE-01～07，均NOT RUN；P0尚未冻结。
