@@ -185,3 +185,11 @@ cd AIGate-Rebuild
 - 《02》ADR-029～032记录四项技术升级的动机/替代/收益/代价；《04》P1～P12每块任务、《05》新增全协议失败/竞态/恢复测试、《06》进度与协作、《01》业务边界全部同步。
 
 **当前状态**：DESIGN COMPLETE CANDIDATE / USER REVIEW PENDING / ENGINEERING NOT VERIFIED；全部代码、实际Flyway和集成测试都未做。用户批准设计后才可下发本地AI执行工程兼容PoC及P1工作包，不自动跳转下一Phase。历史章节里旧“Core54/合计61/P12零表/尚需Provider或Redis方案”的文字仅描述当时设计状态，**以本节和《03》D56为最新有效事实**。
+
+### P0-R01～R10：62张表、API和全业务闭环审查完成（静态，2026-10-23）
+
+总控已按业务功能→数据库→接口/DTO→Gateway/受信RPC→资金/Provider/Redis→FinOps/P12恢复作了一轮正式静态审查，并**直接修正文档设计而不是写项目代码**。发现的10组缺口全部按所属Phase在《03-数据与接口》R01～R10处记录：治理/紧急CAS版本与模型快照、Gateway精确方法、P12 V11完整设计SQL、P7受控容量池创建/绑定/激活/阻断、FinOps Draft/Rebuild持久幂等、P6/P8发布双CAS、P3不得提前引用P7 Pool、P12 ReadinessProbe真实证据闭环、AES-GCM密文最大长度与Grant原因审计/真实资源身份约束。
+
+静态检查当前规范含**Core55+FinOps7共62个不同设计表名**，外键目标/字段类型、索引与Constraint名没有发现静态明显错误；代码和真实MySQL8.4/Flyway验证仍未运行。设计审查结果分别沉淀到《01》业务、《02》架构、《03》字段API、《04》Phase执行包、《05》R-AUD-01～18测试矩阵（全部NOT RUN）、《06》进度。
+
+**项目状态：P0 DESIGN REVIEWED CANDIDATE / NOT FROZEN；P1～P12 NOT STARTED。** 业务/数据/接口/技术选择都由总控确定，正式技术可执行性PoC和逐Phase Java/迁移/Redis Lua/自动化测试应由用户授权的本地AI按现行文档执行；用户仍须最终签收，缺真实兼容证明不可宣称ENGINEERING VERIFIED。
