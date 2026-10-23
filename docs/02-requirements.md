@@ -55,3 +55,24 @@
 ## 5. 验收优先级
 
 功能相关失败必须fail-closed，资金不能超发，未知不能报0。具体逐阶段测试详见 [测试策略](./09-test-plan.md) 和 `tests/` 目录。正式业务实现与对应安全/并发/异常测试同一阶段一次交付。
+
+## 6. 需求 → 交付规格 → 验收的可追溯矩阵
+
+本矩阵用于避免FR仅有一句描述就交给执行AI自行补表或接口：实现范围以Phase为界，精确字段以版本SQL/API为界，失败/安全行为以协议与专项测试为界。链接指向已设计文档而非实际通过证据。
+
+| 需求 | Phase | 迁移/领域权威 | API/协议及真实测试入口 |
+|---|---|---|---|
+| FR-01 | [P1](./phases/p01.md) | [对应版本SQL](./database/core-v01.md) | [API](./api/p01-p03.md) / [测试](./tests/cases-p01-p03.md) |
+| FR-02 | [P2](./phases/p02.md) | [对应版本SQL](./database/core-v02.md) | [API](./api/p01-p03.md) / [测试](./tests/cases-p01-p03.md) |
+| FR-03 | [P3](./phases/p03.md) | [对应版本SQL](./database/core-v03.md) | [API](./api/p01-p03.md) / [测试](./tests/cases-p01-p03.md) |
+| FR-04 | [P4](./phases/p04.md) | [对应版本SQL](./database/core-v04.md) | [API](./api/p04-p06.md) / [测试](./tests/cases-p04-p07.md) |
+| FR-05 | [P5](./phases/p05.md) | [对应版本SQL](./database/core-v05.md) | [API](./api/p04-p06.md) / [测试](./tests/cases-p04-p07.md) |
+| FR-06 | [P6](./phases/p06.md) | [对应版本SQL](./database/core-v06.md) | [API](./api/p04-p06.md) / [测试](./tests/cases-p04-p07.md) |
+| FR-07 | [P7](./phases/p07.md) | [对应版本SQL](./database/core-v07.md) | [API](./api/p07-p12.md) / [测试](./tests/cases-p04-p07.md) |
+| FR-08 | [P8](./phases/p08.md) | [对应版本SQL](./database/core-v08.md) | [API](./api/p07-p12.md) / [测试](./tests/cases-p08-p12.md) |
+| FR-09 | [P9](./phases/p09.md) | [对应版本SQL](./database/core-v09.md) | [API](./api/p07-p12.md) / [测试](./tests/cases-p08-p12.md) |
+| FR-10 | [P10](./phases/p10.md) | [对应版本SQL](./database/core-v10.md) | [API](./api/p07-p12.md) / [测试](./tests/cases-p08-p12.md) |
+| FR-11 | [P11](./phases/p11.md) | [对应版本SQL](./database/finops-v01.md) | [API](./api/p07-p12.md) / [测试](./tests/cases-p08-p12.md) |
+| FR-12 | [P12](./phases/p12.md) | [对应版本SQL](./database/core-v11.md) | [API](./api/p07-p12.md) / [测试](./tests/cases-p08-p12.md) |
+
+跨阶段必须同时核对[全局不可变条件](./04-domain-model.md)、[可信运行协议](./07-runtime-protocols.md)及[设计审查回归](./tests/design-audit-regressions.md)。需求如果改变用户身份、会计单位、收费/重试或安全拒绝语义，先修本SRS与对应ADR，再调整数据库、API、Phase及测试；**禁止只改一份文档让其他合同互相冲突**。

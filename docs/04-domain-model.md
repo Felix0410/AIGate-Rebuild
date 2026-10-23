@@ -46,3 +46,15 @@ Core Outbox → FinOps Inbox → Fact → DailyAggregate / ReadModelState
 ## 4. 周期、金额与模型分类
 
 POINTS为DECIMAL(20,6)十进制字符串、采购币种DECIMAL(20,8)，不允许JSON double表示财务精确金额。周/月以管理员批准的公司IANA ZoneId界定并转换UTC存储；不同币种不自动换算。数据级别依次PUBLIC、INTERNAL、CONFIDENTIAL、RESTRICTED，缺可信标签至少INTERNAL。
+
+## 5. 状态演进与跨边界业务事实
+
+**组织与授权**：管理/运行凭证只可通过受控发行、轮换、到期、吊销改变有效性；检查必须读取Core当前员工、Team和两类ACL状态，不以历史成功签发代表永久有效。
+
+**治理与价发布**：草案→独立审核→发布，已发布版本不可原地改写；Core保留用于结算的真实PriceVersion和用于许可的PolicyRevision。任何竞态发布必须有父对象当前版本与当前发布指针双CAS（参见P6/P8 API）。
+
+**调用与资金**：Invocation先保存受信请求身份/规范版本，经过容量和资金检查才生成唯一DispatchPermit；可信Usage使相关Reservation结算，不确定上游执行保留PENDING/对账。外部HTTP无法由MySQL事务保证物理Exactly-Once，不可通过再次发包来“恢复”ACK丢失。
+
+**跨服务只读事实**：P11 Core Outbox为已提交源；FinOps Inbox/Fact/Manifest与Build为可重建投影，重复事件去重，缺失标记延迟，绝不改写Core账户。P12全局BLOCK只影响新Permit，不注销已经可能收费的历史事实。
+
+字段、状态枚举、可空语义与迁移分别以[SQL版本](./05-database-design.md)和[运行协议](./07-runtime-protocols.md)为准。本节强调领域约束，不另造一套与SQL冲突的状态字面量。

@@ -59,3 +59,22 @@ P1仅前两应用；P11才部署第三个应用。按业务出现真实问题再
 | RabbitMQ+Spring AMQP（P11） | Core→FinOps至少一次异步事实 | 避免FinOps越权访问Core DB | Outbox/Inbox/Manifest/重放 |
 
 技术边界与取舍详见 [ADR目录](./adr/README.md)；运行协议见 [Runtime Protocols](./07-runtime-protocols.md)。
+
+## 6. 按Phase的实际部署与失败边界
+
+| 初次阶段 | 增量部署/数据依赖 | 可用性与失败处理 | 验收入口 |
+|---|---|---|---|
+| P1 | Gateway + Core两个进程；Core独占core_db | Gateway只能显式管理路径转发，Core自鉴mgt_/bst_；内网失败为安全失败，不转发任意内部路由 | [P1](./phases/p01.md) |
+| P2～P6 | 同样两进程；Core数据库增量迁移 | 双身份、真实价、资金及Policy均由Core当前持久事实决定；没有真实Provider收费 | [P2～P6](./phases/README.md) |
+| P7～P10 | 加Redis短期容量共享；Gateway负责一次性外发与SSE | Core资金/唯一Permit在MySQL；Redis租约过期不能释放物理费用；Gateway错误不自动重发 | [运行协议](./07-runtime-protocols.md) |
+| P11 | 加RabbitMQ、FinOps服务和finops_db | Core Outbox是真实已提交源；FinOps离线只能使读模型DELAYED/UNKNOWN，不回滚Core合法账务 | [P11](./phases/p11.md) |
+| P12 | Gateway/Core多副本、Core V11全局单例 | Block与新Permit通过Core持久锁建立先后顺序；readiness证据不可信不能恢复 | [P12](./phases/p12.md) |
+
+部署图表示逻辑通信而非运行成功：必须分别在容器/配置验证Gateway没有core_db账号、FinOps没有Core写库权限、内部svc_只能访问受控RPC、ProviderSecret仅可经受信的单次Permit路径短时使用。MySQL、Redis与Broker的启动顺序不构成跨组件原子事务。
+
+## 7. 架构审查时的必答问题
+
+- 为什么Core资金、Reservation、Permit和Outbox坚持一个数据库提交边界？需要解释并发锁序和网络外发不能事务化的代价。
+- 哪些状态属于MySQL权威、Redis短期协调、FinOps可重建视图？不能把缓存/消息当已经消费的结算事实。
+- 何时允许增加一个服务？必须有当前压力/安全/独立生命周期证据和失败恢复方案，不能机械按表或Controller拆分。
+- 改动Header、HMAC版本、数据库DDL、路由Method或审批范围，哪些消费者/回归必须同步？对照[ADR](./adr/README.md)、[测试](./09-test-plan.md)执行。
