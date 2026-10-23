@@ -97,4 +97,4 @@ ALTER TABLE logical_model
 - 仅本Phase上线后才可以访问对应管理API与受信内部RPC。
 - 本规范只证明设计选择已明确，**真实测试状态NOT RUN**。
 
-参照 [数据库目录](../05-database-design.md)、[所属模块](../06-module-design.md)、[验收](../09-test-plan.md)。
+参照 [数据库目录](../05-database-design.md)、[所属模块](../phases/README.md)、[验收](../09-test-plan.md)。

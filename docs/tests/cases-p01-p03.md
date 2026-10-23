@@ -4,7 +4,7 @@
 
 ## 1. 本册适用范围
 
-实现时必须对照[测试总策略](../09-test-plan.md)、[Phase任务](../06-module-design.md)，每个case记录Git SHA、命令、镜像版本、passed/failed/skipped、实际Provider出站计数及未知财务风险状态。
+实现时必须对照[测试总策略](../09-test-plan.md)、[Phase任务](../phases/README.md)，每个case记录Git SHA、命令、镜像版本、passed/failed/skipped、实际Provider出站计数及未知财务风险状态。
 
 ## 2. 业务验收场景组 1
 
