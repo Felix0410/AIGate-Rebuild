@@ -25,7 +25,7 @@
 
 ## 3. 全量文件清单
 
-### 仓库入口、总体与过程规范（16份）
+### 仓库入口、总体与过程规范（17份）
 
 主文档允许精简索引，但必须为规范提供明确跳转。
 
@@ -47,6 +47,7 @@
 | [`docs/12-interview-notes.md`](./12-interview-notes.md) | 架构表达、设计/实现证据边界与面试模板 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/13-collaboration.md`](./13-collaboration.md) | 总控与本地AI分工、签收及文档变更规则 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/README.md`](./README.md) | 文档导航、职责与规范优先级 | 文档静态核对；待相应Phase真实验证 |
+| [`docs/document-inventory.md`](./document-inventory.md) | 本次71份文件的完整清单、命名规则和静态审查证据 | 清单与仓库树一致 |
 
 ### 架构决策 ADR（12份）
 
@@ -144,9 +145,15 @@ P0～P12各有一份，另设模块总索引。
 | [`docs/tests/cases-p08-p12.md`](./tests/cases-p08-p12.md) | P8～P12路由、降级、紧急、FinOps与恢复案例 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/tests/design-audit-regressions.md`](./tests/design-audit-regressions.md) | P0审查修订涉及的跨Phase回归案例 | 文档静态核对；待相应Phase真实验证 |
 
-本清单统计原有 **70 份文档**；加上本清单，新仓库应有 **71 份Markdown文件**。更新后的数量需在同一次提交后重新核验。
+本次重新核验后的仓库共有 **71份Markdown文件**（原70份经重命名与内容修订，新增本清单1份），上述七组分别为17、12、5、12、14、7、4，合计71。
 
-## 4. 未关闭的正式交付门禁
+## 4. 全库链接和命名核验结果
+
+- 71/71份Markdown文件的相对链接均检查过目标路径存在，未发现断链；此次检查不涵盖网页外部链接的实时可用性及Markdown锚点存在性。
+- 顶层主章节00～13编号各出现一次；Phase p00～p12齐全，数据库core-v01～v11与finops-v01齐全；历史ADR不连续编号有明确保留理由。
+- 历史追加式Dxx/Rxx草稿不在当前树。部分测试caseId仍保留源设计编号以保障用例引用稳定，不表示旧草稿仍为权威。
+
+## 5. 未关闭的正式交付门禁
 
 1. P0的Java21/Spring Boot4.1.1/Gateway MVC/MyBatis-Plus/MySQL8.4/Flyway最小PoC与双进程真实安全E2E仍为NOT_RUN；未知兼容问题不能假装解决。
 2. P1～P12真实业务源码和单元/集成/故障测试尚未启动；不能凭本清单将任何后续Phase标PASS。
