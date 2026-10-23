@@ -31,23 +31,30 @@
 
 上面只有**文档静态检查**，Java构建、Flyway、Gateway、Redis、RabbitMQ及真实Provider各自仍是NOT_RUN。P0冻结不能因本表自动变成PASS。
 
-## 3. 工作分工
+## 3. 第二轮全量复核（2026-10-23）
+
+- 已逐份检查原70份Markdown；更名Phase模块索引并同步引用，新建[全量文件清单](./document-inventory.md)。
+- P1～P12实施文件加入分项任务与测试证据，ADR-007/008/023/025～032加入验证/复审门槛；Requirements/Architecture/Domain/Knowledge/Interview文档补充追踪、失败边界与证据纪律。
+- 12份数据库设计SQL文本：62个不同CREATE TABLE，136处REFERENCES目标均存在，13个ALTER目标均存在且建表先后顺序未发现前向引用。以上是**静态检查**，仍非实际MySQL/Flyway通过。
+- 规范衔接：修订Gateway/内部RPC的schema v1/v2/v3说明和P6内置RuleRegistry已定义事实。下一门禁仍是P0真实PoC和用户签收。
+
+## 4. 工作分工
 
 - 总控：所有架构/功能/字段/接口/权限/测试规格设计，以及GitHub正式文档。
 - 本地AI：收到明确当前Phase实施包后按规范写源码、Flyway、Redis Lua、测试和运行日志。发现冲突只反馈，不擅改正式docs/架构。
 - 用户：批准P0冻结，Phase交付后完成审查确认，选择是否进入下一Phase。
 
-## 4. 阶段结束审查顺序
+## 5. 阶段结束审查顺序
 
 功能检查 → Code Review → 测试检查 → 架构检查 → 技术债 → Progress → Architecture → ADR（如需）→ 知识点 → 面试表达，等待用户确认后下一Phase。
 
-## 5. 剩余有效门禁
+## 6. 剩余有效门禁
 
 1. 审查新主题文档是否准确覆盖已确定规则、API/表数量、Phase依赖及最新修订。
 2. 真实Java21/Boot4.1.1/Gateway MVC/MyBatis-Plus/MySQL8.4/Flyway最小工程兼容PoC，遇到不兼容总控重新决定技术版本/迁移方案。
 3. P0冻结由用户最终签收；其后才可给本地AI正式P1实施包。首次P7/P11/P12的全部故障测试仍归该Phase真实交付。
 
-## 6. 变更记录
+## 7. 变更记录
 
 - 2026-10-21/22：D01～D44，直接微服务、完整业务、迁移与RPC基本规则。
 - 2026-10-22/23：D45～D56，DTO、Provider/Redis/MQ/全局恢复合同。

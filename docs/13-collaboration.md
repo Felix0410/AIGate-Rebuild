@@ -23,3 +23,9 @@
 ## 5. 规范状态约定
 
 `DESIGN_REVIEWED` = 静态检查；`NOT_RUN` = 未运行；`PASS/FAIL/BLOCKED` = 有日志的工程检查；`FROZEN` = 用户确认的稳定规范。两者不能混用。
+
+## 6. 文档审查清单与交付输入
+
+当前全部规范的文件名和职责以[文档总清单](./document-inventory.md)为准。启动某Phase时，执行包至少包含该Phase的`pNN.md`、首次需要的Core/FinOps数据库版本、相应API与RPC、受影响协议、专项测试分册和已有未关闭技术债。执行AI不能只读`README.md`或从历史Dxx编号自行拼业务。
+
+Phase完成后的真实PR/提交与测试记录由总控审阅、更新Progress/Architecture/必要ADR/知识与面试表达；用户确认前不得修改下一Phase为STARTED。静态设计、测试NOT_RUN和真实PASS需要明确区分。

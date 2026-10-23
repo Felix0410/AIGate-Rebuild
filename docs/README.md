@@ -6,6 +6,8 @@
 
 ## 一、从哪里开始
 
+[全部文件清单与逐份审查结果](./document-inventory.md)列出每一份文档、命名规则、修订内容和仍未完成的工程验证门禁。
+
 **规范总入口**：[完整开发设计说明书](./00-development-specification.md)（从业务问题、三应用边界、数据、接口到P0～P12逐章阅读）；**设计冻结执行合同**：[P0检查与兼容PoC](./phases/p00.md)。
 
 - **第一次了解项目**：读[项目总览](./01-project-overview.md) → [需求规格](./02-requirements.md) → [架构](./03-architecture.md) → [Roadmap](./08-roadmap.md)。
