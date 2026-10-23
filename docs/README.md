@@ -6,6 +6,8 @@
 
 ## 一、从哪里开始
 
+**统一开发执行流程**：[Phase开发、任务下发、Git Review、知识讲解和用户签收](./13-collaboration.md#7-实际开发工作流唯一执行闭环)；当前只准备[P0-A至P0-C](./13-collaboration.md#8-立即执行的p0工作包顺序不是p1编码)，不开始P1业务编码。
+
 **当前P0技术入口**：[Java21/Boot4/Cloud Gateway/MyBatis/MySQL/Flyway兼容性矩阵与本地AI PoC执行合同](./tests/p00-technology-compatibility.md)，静态核对已完成，真实PoC待执行。
 
 [全部文件清单与逐份审查结果](./document-inventory.md)列出每一份文档、命名规则、修订内容和仍未完成的工程验证门禁。
@@ -34,7 +36,7 @@
 | 测试 | [09 Test Plan](./09-test-plan.md) | 逐Phase/竞态/真实依赖测试 |
 | 项目进展 | [10 Progress](./10-progress.md) | 实际完成/未执行与技术债 |
 | 知识与表达 | [11 Knowledge Map](./11-knowledge-map.md) / [12 Interview Notes](./12-interview-notes.md) | 按真实开发进度学习和复盘 |
-| 协作 | [13 Collaboration](./13-collaboration.md) | 总控设计、本地AI编码与交付门禁 |
+| 协作与开发流程 | [13 Collaboration](./13-collaboration.md) | 单次任务包→AI实现→本地运行→Git Review→教学→Phase签收完整闭环 |
 | 决策 | [ADR Index](./adr/README.md) | 已选架构及未来决策机制 |
 
 ### 数据库分册

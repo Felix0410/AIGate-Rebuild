@@ -24,6 +24,10 @@ P0先把全部业务设计完成并由用户签收；工程可行性PoC必须有
 
 [模块设计入口](./phases/README.md)给出每个Phase的Business Goal、Scope、Main Flow、Architecture、Tasks、Acceptance Criteria、Knowledge Points。单项的DDL、API和协议在其它规范分册，不让本地AI另选。
 
-## 3. 当前进度
+## 3. 开发实施与验收节奏
+
+本路线表回答“每个Phase做什么”，而[开发执行流程](./13-collaboration.md#7-实际开发工作流唯一执行闭环)回答“每次任务如何交给本地AI、运行、提交、审查、讲解并验收”。每一Phase先打通一个真实最小业务主链，再补当期已承诺的参数校验、异常、安全、并发及回归；可以多次Git提交，但不得跨Phase擅自推进。P0优先按[P0-A/B/C](./13-collaboration.md#8-立即执行的p0工作包顺序不是p1编码)分包；PoC完成且经用户签收后才开启P1。
+
+## 4. 当前进度
 
 **P0：设计审查候选，尚未FROZEN；P1～P12均NOT STARTED。** 工程 PoC和真实SQL迁移全部 NOT RUN。详见[Progress](./10-progress.md)。
