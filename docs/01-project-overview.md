@@ -32,7 +32,7 @@ AIGate 是企业内部统一 AI 调用与治理平台。它把员工、Agent、�
 
 ## 3. 交付范围与阶段
 
-P1～P12 精确范围见 [Roadmap](./08-roadmap.md)；每阶段独立工作包见 [Module Design](./06-module-design.md)。**P1只有Gateway/Core两个独立应用与6张Core表**；FinOps第三服务和独立数据库P11才上线；P12才新增Core V11全局状态表。
+P1～P12 精确范围见 [Roadmap](./08-roadmap.md)；每阶段独立工作包见 [Module Design](./phases/README.md)。**P1只有Gateway/Core两个独立应用与6张Core表**；FinOps第三服务和独立数据库P11才上线；P12才新增Core V11全局状态表。
 
 ## 4. 设计版本和真实性
 

@@ -9,7 +9,7 @@
 **规范总入口**：[完整开发设计说明书](./00-development-specification.md)（从业务问题、三应用边界、数据、接口到P0～P12逐章阅读）；**设计冻结执行合同**：[P0检查与兼容PoC](./phases/p00.md)。
 
 - **第一次了解项目**：读[项目总览](./01-project-overview.md) → [需求规格](./02-requirements.md) → [架构](./03-architecture.md) → [Roadmap](./08-roadmap.md)。
-- **准备实施某个Phase**：读[模块设计索引](./06-module-design.md)选对应Phase → 该Phase的数据库版本 → API分册 → 涉及的协议 → 对应测试。
+- **准备实施某个Phase**：读[模块设计索引](./phases/README.md)选对应Phase → 该Phase的数据库版本 → API分册 → 涉及的协议 → 对应测试。
 - **需要解释架构选型**：读[ADR](./adr/README.md)，每篇都记录背景/候选/收益/代价。
 - **准备Code Review和面试**：读[协作规范](./13-collaboration.md)、[知识地图](./11-knowledge-map.md)、[面试笔记](./12-interview-notes.md)。
 
@@ -26,7 +26,7 @@
 | 接口 | [06 API Design](./06-api-design.md) | 外部DTO/错误/鉴权/分页与接口分册 |
 | 运行协议 | [07 Runtime Protocols](./07-runtime-protocols.md) | Provider、Redis、SSE、HMAC、MQ、恢复 |
 | 开发路线 | [08 Roadmap](./08-roadmap.md) | P0～P12及边界门禁 |
-| 模块 | [Module Design](./06-module-design.md) | P1～P12各自执行说明 |
+| 模块 | [Module Design](./phases/README.md) | P0～P12各自执行说明 |
 | 测试 | [09 Test Plan](./09-test-plan.md) | 逐Phase/竞态/真实依赖测试 |
 | 项目进展 | [10 Progress](./10-progress.md) | 实际完成/未执行与技术债 |
 | 知识与表达 | [11 Knowledge Map](./11-knowledge-map.md) / [12 Interview Notes](./12-interview-notes.md) | 按真实开发进度学习和复盘 |

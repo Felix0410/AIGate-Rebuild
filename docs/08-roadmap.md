@@ -22,7 +22,7 @@ P0先把全部业务设计完成并由用户签收；工程可行性PoC必须有
 
 ## 2. 每个阶段的完整工作包
 
-[模块设计入口](./06-module-design.md)给出每个Phase的Business Goal、Scope、Main Flow、Architecture、Tasks、Acceptance Criteria、Knowledge Points。单项的DDL、API和协议在其它规范分册，不让本地AI另选。
+[模块设计入口](./phases/README.md)给出每个Phase的Business Goal、Scope、Main Flow、Architecture、Tasks、Acceptance Criteria、Knowledge Points。单项的DDL、API和协议在其它规范分册，不让本地AI另选。
 
 ## 3. 当前进度
 

@@ -1,4 +1,4 @@
-# 模块设计 · P1～P12实施合同索引
+# Phase 实施合同与业务模块索引 · P0～P12
 
 ## 1. 如何使用这套文档
 
@@ -8,20 +8,22 @@
 
 ## 2. 模块目录
 
+| [P0](./p00.md) | 设计冻结与双进程兼容PoC | 不新增业务表 |
+
 | Phase | 业务目标 | 数据库归属 |
 |---|---|---|
-| [P1](./phases/p01.md) | 组织管理/双应用 | Core V1 按数据库目录 |
-| [P2](./phases/p02.md) | Agent双Key/ACL | Core V2 按数据库目录 |
-| [P3](./phases/p03.md) | Catalog/双价/Provider Secret | Core V3 按数据库目录 |
-| [P4](./phases/p04.md) | 周额度/采购预算/账本 | Core V4 按数据库目录 |
-| [P5](./phases/p05.md) | TeamPool/Grant | Core V5 按数据库目录 |
-| [P6](./phases/p06.md) | 数据治理/安全审批 | Core V6 按数据库目录 |
-| [P7](./phases/p07.md) | 实际Chat JSON/SSE/Redis Permit | Core V7 按数据库目录 |
-| [P8](./phases/p08.md) | 同模型路由健康 | Core V8 按数据库目录 |
-| [P9](./phases/p09.md) | 受控LOW保底 | Core V9 按数据库目录 |
-| [P10](./phases/p10.md) | 两人紧急审批/4:2:1 | Core V10 按数据库目录 |
-| [P11](./phases/p11.md) | FinOps/MQ/读模型 | FinOps V1 7张 |
-| [P12](./phases/p12.md) | 多实例/全局恢复 | Core V11 1张 |
+| [P1](./p01.md) | 组织管理/双应用 | Core V1 按数据库目录 |
+| [P2](./p02.md) | Agent双Key/ACL | Core V2 按数据库目录 |
+| [P3](./p03.md) | Catalog/双价/Provider Secret | Core V3 按数据库目录 |
+| [P4](./p04.md) | 周额度/采购预算/账本 | Core V4 按数据库目录 |
+| [P5](./p05.md) | TeamPool/Grant | Core V5 按数据库目录 |
+| [P6](./p06.md) | 数据治理/安全审批 | Core V6 按数据库目录 |
+| [P7](./p07.md) | 实际Chat JSON/SSE/Redis Permit | Core V7 按数据库目录 |
+| [P8](./p08.md) | 同模型路由健康 | Core V8 按数据库目录 |
+| [P9](./p09.md) | 受控LOW保底 | Core V9 按数据库目录 |
+| [P10](./p10.md) | 两人紧急审批/4:2:1 | Core V10 按数据库目录 |
+| [P11](./p11.md) | FinOps/MQ/读模型 | FinOps V1 7张 |
+| [P12](./p12.md) | 多实例/全局恢复 | Core V11 1张 |
 
 ## 3. 依赖和不可逆事实
 
@@ -35,4 +37,4 @@
 
 完成一轮功能检查、Code Review、测试、架构、债务、进度、ADR（如需）、知识点、面试说明并交用户签收；未经确认不自动进入下一Phase。
 
-查看[Roadmap](./08-roadmap.md)、[测试策略](./09-test-plan.md)与[协作规则](./13-collaboration.md)。
+查看[Roadmap](../08-roadmap.md)、[测试策略](../09-test-plan.md)与[协作规则](../13-collaboration.md)。
