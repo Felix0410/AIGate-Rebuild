@@ -21,7 +21,7 @@
 | [P9](./phases/p09.md) | 受控LOW保底 | Core V9 按数据库目录 |
 | [P10](./phases/p10.md) | 两人紧急审批/4:2:1 | Core V10 按数据库目录 |
 | [P11](./phases/p11.md) | FinOps/MQ/读模型 | FinOps V1 7张 |
-| [P12](./phases/p12.md) | 多实例/全局恢复 | Core V12 1张 |
+| [P12](./phases/p12.md) | 多实例/全局恢复 | Core V11 1张 |
 
 ## 3. 依赖和不可逆事实
 
