@@ -192,24 +192,24 @@ Core只允许正确agk_+empk_关联原Invocation，响应公开所需最低元�
 | Permit ACK丢失 | 可能已有 FinanceOperation+Reservation+唯一Permit | 查只读dispatch-state、标UNKNOWN并对账，**不重发Prompt** | 取回token、再派发一次Provider、切换另一Deployment |
 | Result ACK丢失 | 可能已经SETTLED、Ledger+Outbox提交 | **重报相同结果收据**或只读查询 | 重试 Provider HTTP 或更换usage值 |
 
-**DTO 尚需最终核对**：Core持有HMAC-SHA256摘要为DB BINARY(32)，不需/不允许Gateway传所谓HEX HMAC、max消息体64KiB、上下文Token上界不是 input_tokens的任意客户端估算、Provider 支持的stream usage类别/证书轮换与 timeout；实际Spring Web MVC/RestClient 不能自动把201明确成功与RPC 504模糊处理混为一谈。P0待真实集成验证，六类接口目前是可执行的V1设计合同但尚未有Java类或真HTTP测试。
+**实现验证门禁（设计已确定，但工程未测）**：Core持有HMAC-SHA256摘要为DB BINARY(32)，不需/不允许Gateway传所谓HEX HMAC、max消息体64KiB、上下文Token上界不是 input_tokens的任意客户端估算、Provider 支持的stream usage类别/证书轮换与 timeout；实际Spring Web MVC/RestClient 不能自动把201明确成功与RPC 504模糊处理混为一谈。P0待真实集成验证，六类接口目前是可执行的V1设计合同但尚未有Java类或真HTTP测试。
 
 
-## D42 协议优先级和服务端摘要纠错
+## 服务端摘要计算与协议版本优先级
 
-- **旧D16的 clientRequestDigest/payloadDigest 由Gateway计算的HMAC字段作废**。Preflight和dispatch-permits均不提交该字段；Core独占应用HMAC Key，对严格解析后的受控DTO deterministic canonicalization；保存BINARY(32)摘要。Dispatch再次对完整业务字段独立计算校验；Gateway无需、也不得持有Core HMAC密钥。
-- schemaVersion=1：本节采用JSON字段 model、max_tokens、temperature、top_p；D16旧的 apiVersion、modelCode、maxTokens、topP **不是并行兼容别名**。P9/P10合法新增fallback或Emergency字段时先发布schemaVersion升级和兼容测试，不能在旧Invocation上换规范化规则重算。
+- **废弃的 clientRequestDigest/payloadDigest 由Gateway计算的HMAC字段作废**。Preflight和dispatch-permits均不提交该字段；Core独占应用HMAC Key，对严格解析后的受控DTO deterministic canonicalization；保存BINARY(32)摘要。Dispatch再次对完整业务字段独立计算校验；Gateway无需、也不得持有Core HMAC密钥。
+- schemaVersion=1：本节采用JSON字段 model、max_tokens、temperature、top_p；废弃的 apiVersion、modelCode、maxTokens、topP **不是并行兼容别名**。P9/P10合法新增fallback或Emergency字段时先发布schemaVersion升级和兼容测试，不能在旧Invocation上换规范化规则重算。
 - 规范化只固定对象字段顺序、必填和缺省值、数值的明确十进制表示，**不对messages.content做trim、lowercase、Unicode变换**。允许的默认temperature=1.0、top_p=1.0在计算摘要前由DTO填充；可选数字显式null一律400，缺失才填默认；不接受额外未知字段、工具或混入的收费选项。
 - Core存的摘要用独立服务器密钥的HMAC-SHA256，防止泄漏摘要后对短Prompt做离线字典猜测；不把HMAC/Provider Key/原Prompt写入日志、Redis、Outbox或报表。
 - 管理Gateway代理P1 connectTimeout=2s/responseTimeout=10s；P7六RPC建议connectTimeout=2s/responseTimeout=5s（真实运行门禁需验证）。Permit五秒无201确定结果不是未提交证明：Gateway不得通过GET重新取attemptToken或新签上游许可。Core持金融MySQL锁时不调用Redis或Provider HTTP。
 - 同一个result报告操作号的重试，要求完全同一Provider Evidence Digest/Body；只允许受信Gateway Provider Adapter提交费用证据，客户端不能指定货币结算金额。
-- Gateway将内部安全错误映射到D33外部统一结构 {error:{code,message,requestId,retryable}}。HTTP200已提交的SSE错误不可能再改HTTP状态，只能发安全错误事件/断开和提供状态查询。
+- Gateway将内部安全错误映射到[API总则](../06-api-design.md)外部统一结构 {error:{code,message,requestId,retryable}}。HTTP200已提交的SSE错误不可能再改HTTP状态，只能发安全错误事件/断开和提供状态查询。
 
 
 
 ## 2. 版本与安全覆盖
 
-- D42 v1 RPC为原始规范；P9增加SchemaV2/fallback_mode，P10增加SchemaV3/approvalId/taskRef，新字段须与Core HMAC一起比对。
+- P7 v1 RPC为基础合同；P9增加SchemaV2/fallback_mode，P10增加SchemaV3/emergencyAuthorizationId/taskRef，新字段须与Core HMAC一起比对。
 - Gateway不计算、更不持有Core请求HMAC Key；旧Key轮换后Core按Invocation存储KeyId+SchemaVersion重验。
 - 提交Permit后即使RPC ACK丢失，Gateway也仅查dispatch-state，不重发Provider或重新签发AttemptToken。
 - FinOps P11的source-manifest、source-events和typedScope都是内网受信调用，FinOps不接受原mgt_。

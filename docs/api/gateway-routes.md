@@ -5,7 +5,7 @@
 ## 1. 外部路由注册规则
 
 
-**目标**：D12/D19～D29 各阶段分别写了管理路由，D16/D18 又要求Gateway明确注册允许路径。此处固定 Gateway 的**分阶段路径注册纪律**，防止本地AI为了省事使用 /api/v1/** 或 /** 裸通配而把未实现的P11财务报表、P7运行API、Core私有/internal过早暴露。这里是**边界清单，不取代各Phase逐接口DTO契约**。
+**目标**：各阶段API必须以唯一公开Gateway入口注册明确的Method+Path；历史草稿不能取代现行[管理API分册](./p01-p03.md)、[额度治理分册](./p04-p06.md)、[运行管理分册](./p07-p12.md)。此处固定 Gateway 的**分阶段路径注册纪律**，防止本地AI为了省事使用 /api/v1/** 或 /** 裸通配而把未实现的P11财务报表、P7运行API、Core私有/internal过早暴露。这里是**边界清单，不取代各Phase逐接口DTO契约**。
 
 ## 按 Phase 扩容的唯一公开入口
 
@@ -27,10 +27,10 @@
 **实现规则**：
 - 本表使用了前缀继承省略写法（例如 P2 第一个资源为 /api/v1/agents，后面的 /{agentId}/keys 在此前缀下），落地为 Gateway RouteDefinition 时必须**展开为明确合法路径+HTTP method**，而不是拿本表的文字直接作为PathPredicate或把所有子路径 /** 放行。执行AI只能实现当前Phase已经存在的端点；新增一个API要同步 Gateway routes、Core Controller、授权测试和本清单。
 - 除网关自己的受限 Actuator readiness/liveness 外，任何 /internal/**、URL编码变体、路径规范化后包含 traversal、/actuator/env 等都不对客户端开放。Gateway卸除伪造 X-AIGate-Service-* / X-Internal-* / X-Employee-Id / Forwarded 等，内部svc_只由受信HttpClient为自身RPC添加；运行时不能用mgt_取代agk_/empk_。
-- P1就进行一次真正的网络双应用转发，其余Phase增加显式配置；Core内部 /internal/v1/ping（P1）、/runtime-identities/verify（P2）、/catalog/models/{modelCode}/eligibility（P3）、D42六类Invocation RPC（P7）、FinOps私有source-manifest/source-event（P11）**不属于Gateway公开路由**，即使它们真实运行并返回200，公开请求也应404/403。
+- P1就进行一次真正的网络双应用转发，其余Phase增加显式配置；Core内部 /internal/v1/ping（P1）、/runtime-identities/verify（P2）、/catalog/models/{modelCode}/eligibility（P3）、六类Invocation RPC（P7，见[内部RPC](./internal-rpc.md)）、FinOps私有source-manifest/source-event（P11）**不属于Gateway公开路由**，即使它们真实运行并返回200，公开请求也应404/403。
 - Router不能无条件转发客户端 Authorization mgt_ 给FinOps；P11进入FinOps的是Core验证后的业务主体/TypedScope，原 mgt_仍只在 Gateway→Core上被验证。
 - Gateway管理POST/PATCH/PUT/DELETE绝不自动业务重试。外部504可能意味着Core已COMMIT，只有同业务幂等ID的安全查询或有明确重复收据的无敏感重放才可继续；特别是首次管理Key不重新显示。
-- 公开错误JSON以D33/D43唯一包络 {error:{code,message,requestId,retryable}}；内部 RPC以D42 schemaVersion=1。**P1两个Bootstrap端点使用bst_，不是管理mgt_的替代角色**。
+- 公开错误JSON按[API总则](../06-api-design.md)使用 {error:{code,message,requestId,retryable}}；内部RPC按[Canonical协议](../protocols/runtime-canonical.md)的P7 v1/P9 v2/P10 v3协商版本，不可永远锁定在v1。**P1两个Bootstrap端点使用bst_，不是管理mgt_的替代角色**。
 
 
 
