@@ -65,7 +65,7 @@ P0无需提前实现P1管理Key/Bootstrap实体的完整流程。临时认证可
 | COMP-09 | Core停止、MySQL中断、重启复测 | 安全失败，不返回假200，不导致临时认证泄露 |
 | COMP-10 | 不启用`p0-compat` profile访问临时接口 | 必须不可见；记录PoC清理计划 |
 
-P0-COMP08是Gateway技术路线的重要验收，不代表P7真实Provider费用或Exactly-Once已证明。若有重要COMP失败，保持P0 NOT_FROZEN并将精确堆栈/最小复现送总控；不得让在IDEA中自行更换架构或技术。
+P0-COMP08是Gateway技术路线的重要验收，不代表P7真实Provider费用或Exactly-Once已证明。若有重要COMP失败，保持P0 NOT_FROZEN并将精确堆栈/最小复现送总控；用户遇到错误不得未经总控评审自行更换架构或技术。
 
 ## 6. 证据必须提交
 

@@ -51,6 +51,10 @@
 
 [请求签名](./protocols/runtime-canonical.md) · [治理](./protocols/governance.md) · [Provider](./protocols/provider-adapter.md) · [Redis](./protocols/redis-admission.md) · [FinOps](./protocols/finops-events.md) · [全局恢复](./protocols/global-admission.md) · [统一约束](./protocols/common-contracts.md)
 
+### P0 IDEA实际操作
+
+[从IDEA Clone Repository开始的亲手工程搭建指南](./guides/p00-idea-hands-on.md)：按操作节点逐步验证，**不是P0-A/B/C分包，也不委托本地AI**。
+
 ### 测试分册
 
 [P1～P3](./tests/cases-p01-p03.md) · [P4～P7](./tests/cases-p04-p07.md) · [P8～P12](./tests/cases-p08-p12.md) · [审查回归](./tests/design-audit-regressions.md)

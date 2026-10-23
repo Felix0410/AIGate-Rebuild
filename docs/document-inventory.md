@@ -8,6 +8,7 @@
 - 修复重复编号：原`docs/06-module-design.md`迁到`docs/phases/README.md`，顶层`06-api-design.md`保留为唯一06编号；ADR-007/008/023/025～032的历史编号**不重新编号**。
 - 每个Phase补齐可直接执行的任务分解、当期迁移/API/协议与专项测试入口；ADR补充真实验证及重审门槛。修复P6 RuleRegistry“尚未定义”的过时说法及内部RPC P10字段/版本描述。
 - 静态SQL检查：12份设计SQL有**62个互不重复CREATE TABLE**、**136处FOREIGN KEY REFERENCES目标均存在**、**13个ALTER TABLE目标均存在**，未发现本文件顺序引用尚未创建的表。**未在MySQL8.4/Flyway真实执行，不保证DDL及语义正确**。
+- 开发方式已调整：**P0由用户在IDEA中亲自完成，总控一步步指导，不交给本地AI**；P1～P12一个Phase原则上一份完整任务、一次整体交付与Review，E01～E04仅为内部验收维度，不要求四次开发/提交。详见[开发协作](./13-collaboration.md)与[IDEA指南](./guides/p00-idea-hands-on.md)。
 - 文档内容采用“独立完整的实施合同 + 主题权威分册”的方式：索引文档不机械复制所有DTO，SQL文档按迁移版本单独完整列出，Phase文档以链接和工作项组成可执行合同。
 
 ## 2. 命名规范
@@ -21,6 +22,7 @@
 | 核心数据库 | `docs/database/core-vNN.md` | 设计文档版本，真正Flyway文件名以各文档内Vn__*.sql为准 |
 | FinOps数据库 | `docs/database/finops-v01.md` | 独立DB/独立Flyway版本号，不与Core V1冲突 |
 | API/协议/测试专题 | `docs/api/*.md`、`docs/protocols/*.md`、`docs/tests/*.md` | 按业务主题与Phase范围命名，避免新增聊天编号日志 |
+| IDEA操作指南 | `docs/guides/p00-idea-hands-on.md` | 按界面操作节点教学，不等于多个Git任务包 |
 | 清单自身 | `docs/document-inventory.md` | 维护全部文档目录与静态复核结论 |
 
 ## 3. 全量文件清单
@@ -45,9 +47,9 @@
 | [`docs/10-progress.md`](./10-progress.md) | 当前P0进度、静态检查证据、未运行事项 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/11-knowledge-map.md`](./11-knowledge-map.md) | 按实际Phase学习与复盘要求 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/12-interview-notes.md`](./12-interview-notes.md) | 架构表达、设计/实现证据边界与面试模板 | 文档静态核对；待相应Phase真实验证 |
-| [`docs/13-collaboration.md`](./13-collaboration.md) | 总控与本地AI分工、签收及文档变更规则 | 文档静态核对；待相应Phase真实验证 |
+| [`docs/13-collaboration.md`](./13-collaboration.md) | P0用户IDEA亲手操作；后续整Phase执行、评审和签收 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/README.md`](./README.md) | 文档导航、职责与规范优先级 | 文档静态核对；待相应Phase真实验证 |
-| [`docs/document-inventory.md`](./document-inventory.md) | 本次71份文件的完整清单、命名规则和静态审查证据 | 清单与仓库树一致 |
+| [`docs/document-inventory.md`](./document-inventory.md) | 本次73份文件的完整清单、命名规则和静态审查证据 | 清单与仓库树一致 |
 
 ### 架构决策 ADR（12份）
 
@@ -134,6 +136,14 @@ P0～P12各有一份，另设模块总索引。
 | [`docs/protocols/redis-admission.md`](./protocols/redis-admission.md) | 容量Pool Lua、Guard、调度公平与失效隔离 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/protocols/runtime-canonical.md`](./protocols/runtime-canonical.md) | CanonicalDTO/HMAC密钥与v1/v2/v3契约 | 文档静态核对；待相应Phase真实验证 |
 
+### IDEA操作手册（1份）
+
+只记录P0用户亲自执行的图形化IDE操作路线，不允许当作实际测试PASS。
+
+| 文件 | 内容与职责 | 审查定位 |
+|---|---|---|
+| [`docs/guides/p00-idea-hands-on.md`](./guides/p00-idea-hands-on.md) | P0在IntelliJ IDEA逐步操作：Git clone、JDK、Maven双模块、MySQL/Flyway、HTTP/SSE、Git提交 | 用户执行的教学路线；真实构建/测试仍NOT_RUN |
+
 ### 测试用例（5份）
 
 设计用例清单，不表示真实PASS。
@@ -146,11 +156,11 @@ P0～P12各有一份，另设模块总索引。
 | [`docs/tests/p00-technology-compatibility.md`](./tests/p00-technology-compatibility.md) | P0官方版本兼容矩阵、唯一Starter清单及COMP01～10真实PoC执行合同 | 官方文档静态核对；构建与运行待验证 |
 | [`docs/tests/design-audit-regressions.md`](./tests/design-audit-regressions.md) | P0审查修订涉及的跨Phase回归案例 | 文档静态核对；待相应Phase真实验证 |
 
-本次重新核验后的仓库共有 **72份Markdown文件**（原70份经重命名与内容修订，新增本清单与P0技术审查2份），上述七组分别为17、12、5、12、14、7、5，合计72。
+本次重新核验后的仓库共有 **73份Markdown文件**（原70份经重命名与内容修订，新增清单、P0技术审查、IDEA操作指南3份），上述八组分别为17、12、5、12、14、7、1、5，合计73。
 
 ## 4. 全库链接和命名核验结果
 
-- 原71份Markdown文件的相对链接已检查过目标路径存在；新增P0兼容性文档及本次更新链接需按当前仓库树再次复核，未发现断链；此次检查不涵盖网页外部链接的实时可用性及Markdown锚点存在性。
+- 旧文档的相对链接曾逐一检查目标路径存在；2026-10-23新增IDEA指南及修订P0、Phase、协作流程，已对本轮修改的相关相对链接按当前树再次核查；此次检查不涵盖网页外部链接的实时可用性及Markdown锚点存在性。
 - 顶层主章节00～13编号各出现一次；Phase p00～p12齐全，数据库core-v01～v11与finops-v01齐全；历史ADR不连续编号有明确保留理由。
 - 历史追加式Dxx/Rxx草稿不在当前树。部分测试caseId仍保留源设计编号以保障用例引用稳定，不表示旧草稿仍为权威。
 

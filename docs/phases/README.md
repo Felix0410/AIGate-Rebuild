@@ -4,7 +4,7 @@
 
 本目录按**功能模块**组织，不再按D编号追加。每个Phase有一份独立的实施文件（Business Goal、Scope、Main Flow、Architecture、Tasks、Acceptance Criteria、Knowledge Points）；它引用同一套数据库/API/协议权威，不在不同地方复制价格或状态字段。
 
-本地AI每次只获取当前已批准Phase的文档及相关数据库/API/测试链接。若一个字段在项目实际迁移/接口中存在冲突，先报告总控更改正式设计，不在实现端猜测。
+**P0由用户在IntelliJ IDEA亲手实现和验证**，按[IDEA教学手册](../guides/p00-idea-hands-on.md)逐步推进，不委托本地AI。**P1～P12由本地AI每个Phase一次完整实施**；E01～E04仅作为同一交付的验收维度，不要求分成四轮提交。本地AI只获取当前已批准Phase的文档及相关数据库/API/测试链接。若一个字段在项目实际迁移/接口中存在冲突，先报告总控更改正式设计，不在实现端猜测。
 
 ## 2. 模块目录
 
