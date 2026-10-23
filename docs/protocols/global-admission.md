@@ -10,12 +10,10 @@ P12 Core V11新增一张单例状态表，初始ADMISSION_BLOCKED；正常Permit
 
 具体参与者遵守[架构边界](../03-architecture.md)、[内部RPC](../api/internal-rpc.md)以及Core唯一Permit/事务约束，客户端不提供权威费用、治理结果或真实ProviderSecret。
 
-## 3. 字段、状态、失败与恢复详细合同
-
-
+## 3. 规范字段、状态与失败恢复合同
 **业务问题**：P7容量Pool基于Redis Guard/Provider状态防止重复派发，但P12已经有多个Gateway和Core进程、三服务以及真实备份恢复。如果“停止新收费调用”只写某一个JVM变量/某个Redis键，网络分区、Redis重启和Gateway滚动升级会产生节点间不同的准入决定；而直接在已有资金预算表里塞运营开关会混淆公司财务额度与系统健康。原D29提过`runtime_admission_control`可选表；本次明确选择**Core MySQL单例持久权威**，所以它不再是随演练决定的空白。
 
-### 62.1 方案、归属与SQL字段级合同
+### 3.1 方案、归属与SQL字段级合同
 
 P12 新增 **Core V11__runtime_admission_control.sql**（命名指Core自身增量版本，P11 FinOps独立finops_db V1）；增加且仅增加一张表`runtime_admission_control`，Core数据库数量从54变成**55**，FinOps仍7，总设计**62张表**，不提前修改已经设计好的 Core V1～V10或FinOpsV1。这里给实施型数据库合同，不是本人替本地AI编写迁移文件。
 
@@ -34,7 +32,7 @@ P12 新增 **Core V11__runtime_admission_control.sql**（命名指Core自身增�
 
 种子必须为`(id=1,state=ADMISSION_BLOCKED,epoch=0,version=0,reason_code=INITIAL_P12_MIGRATION)`。**禁止**因为部署完新表就立即SERVING；必须通过有证据的显式 `recovery-review` 才放开。应用数据库账号仅Core持读写，Gateway不能写，FinOps数据库不能引用/修改该表；Schema migrator用户和Core App用户分离。生产已有 Core V1～V10账本和资金历史，不得在迁移中DROP/CREATE旧表。
 
-### 62.2 全局线性化、权限与对外端点
+### 3.2 全局线性化、权限与对外端点
 
 `GET /api/v1/operations/runtime-status`：仅GLOBAL PLATFORM_ADMIN，Core读取当前单例`state,epoch,version,changedAt,reasonCode`及聚合依赖健康（MySQL、Redis、GatewayPool、必要Core RPC、Provider安全配置、RabbitMQ/FinOps只影响报表，不必阻止既有Core独立收款）并返回`{controlState,epoch,version,observedAt,dependencies:[{name,status,observedAt}],readiness: "READY"|"NOT_READY"|"UNKNOWN"}`。依赖未知不伪装HEALTHY。
 
@@ -46,13 +44,13 @@ P12 新增 **Core V11__runtime_admission_control.sql**（命名指Core自身增�
 
 **本地幂等物理修订**：P12运营写操作不能只相信Redis短TTL，也不能仅靠单例的`expectedVersion`区分「相同业务请求重放」与「不同请求版本冲突」。因此Core V11除创建单例表，还必须对**已存在的V1 `admin_audit_event`做兼容ALTER**：新增 nullable `operation_idempotency_key VARCHAR(128) COLLATE utf8mb4_bin`、nullable `operation_request_hmac BINARY(32)`、nullable `operation_hmac_key_id VARCHAR(32)`；新增`UNIQUE KEY uk_admin_operation_receipt(actor_type,actor_id,action,operation_idempotency_key)`，三个新字段的CHECK为「同时全部NULL或同时全部NOT NULL」。旧审计行保持NULL，不影响历史；P12 `admission-block`和`recovery-review`首次执行时三列**全部非NULL**，由Core独立运维请求HMAC密钥基于canonical(action,body,actorId)形成摘要，KeyID供轮换追验，绝不存敏感原文。Core首先验证同Actor+action+operationKey收据：相同body重放统一409 `IDEMPOTENCY_REPLAY`并只带安全当前状态，不再次改变epoch/version；不同body重放409 `IDEMPOTENCY_CONFLICT`。不存在收据时锁运营单例、CAS expectedVersion、在**同一core_db事务**插入带幂等信息的admin_audit_event；唯一键和提交事实保证并发只成功一次。运营写入是单表状态变更+同库审计，**不新增另一张通用收据表**。真实审计保留期须长于可能操作重放窗口，不因状态恢复便删历史。
 
-### 62.3 Gateway/Core/Redis 多实例状态判断
+### 3.3 Gateway/Core/Redis 多实例状态判断
 
 **Core Prequeue**和**Core最终Permit的同一MySQL资金事务**均读取全局state；Permit首先用MySQL8.4/InnoDB的`SELECT ... FOR SHARE`**共享锁定读**读取 `runtime_admission_control(id=1)`，必须state=SERVING且epoch为当前已批准代次才进行身份/价/资金锁序；`admission-block`用`SELECT ... FOR UPDATE`**独占锁**更新此单例。合法Permit之间共享锁可以并发，不因一个单例把所有Provider请求无意义串行化；停止操作必须等所有已取得共享锁的Permit事务提交/回滚，二者顺序由InnoDB锁等待与提交决定。谁先获得相容锁并提交决定新Permit能否合法发生：BLOCK先提交则Permit拒绝；Permit已先提交的网络请求仍可能出站，不允许管理界面宣称BLOCK追溯取消已有订单。两种操作锁序都必须以singleton开始（之后需要锁其它表时按D33账户锁序），并且**绝不在持此锁时等待Redis/HTTP或全模型文本扫描**。
 
 Gateway可将Core的`ADMISSION_BLOCKED`缓存为**更严格拒绝**，但不能把之前`SERVING`缓存当成成功许可。任何Gateway本地状态未知→拒绝新业务；FinOps读模型延迟不改变Core准入状态。P7 perPool Guard的`admissionEpoch`管Redis容量生命周期，与P12 global `epoch`是**两个不同的版本轴**，不要求数值相等：Core要同时验证当前 global SERVING与真实perPool OPEN/runId/capacityLease。Gateway实例SIGTERM的DRAINING只阻止本实例新请求并有界等待在途/保留未知账风险，不能代替Core全局开关。
 
-### 62.4 发布/恢复Runbook合同
+### 3.4 发布/恢复Runbook合同
 
 - **P12引入V11是影响全局 admission 的兼容升级**：发布前先用受控入口暂停新调用并排查在途，升级Core以识别V11门禁再运行迁移，随后全量Gateway滚动至需要Core最新Permit的版本。种子BLOCKED；只有真实两服务路由/SQL/RedisGuard负向E2E后运营审核开SERVING。不允许旧Core实例仍能绕过V11读取许可。
 - **Redis cold-restart**：PerPool Guard runId/epoch失效，Core即使global SERVING也拒新Permit；操作员核验旧SELF_HOSTED物理任务/未知Provider风险后升pool epoch并开放guard，若风险影响全局则admission-block。
@@ -67,8 +65,7 @@ Gateway可将Core的`ADMISSION_BLOCKED`缓存为**更严格拒绝**，但不能�
 
 
 
-## 4. 验收与不变量
-
+## 4. 验收标准与不可变条件
 - 资金不负、未知不报0；所有关键真实I/O失联都不能授权第二次Provider发送。
 - API字段与迁移真实列以[API设计](../06-api-design.md)、[DB目录](../05-database-design.md)为准；有冲突须提交总控修正。
 - 相应Phase真实负例/故障测试详见[测试策略](../09-test-plan.md)；当前NOT RUN。

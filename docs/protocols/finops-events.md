@@ -10,12 +10,10 @@
 
 具体参与者遵守[架构边界](../03-architecture.md)、[内部RPC](../api/internal-rpc.md)以及Core唯一Permit/事务约束，客户端不提供权威费用、治理结果或真实ProviderSecret。
 
-## 3. 字段、状态、失败与恢复详细合同
-
-
+## 3. 规范字段、状态与失败恢复合同
 **Business Goal**：使用Core同库真实Ledger/Grant/ProviderUsage事实生成可审计的五指标FinOps报表，而不把异步统计当资金权威。P11才部署独立aigate-finops、RabbitMQ和finops_db；P4已经落库的历史Outbox按同一安全白名单正常补拉，不在P1～P10提前要求RabbitMQ启动。
 
-### 61.1 事件发布者、路由、白名单与不变量
+### 3.1 事件发布者、路由、白名单与不变量
 
 Core `outbox_event` 是已提交的唯一事实源，RabbitMQ只是至少一次传输，FinOps Inbox/Fact/Aggregate使用自己的单库事务去重。`eventId` UUID、`businessEventKey`（同一真实来源业务事件唯一）、`aggregateRevision>0`、`schemaVersion=1`、`payloadDigest=SHA256(canonicalPayloadJSON)`，与Core Outbox表中既有列逐一对应。Outbox `payload_digest`为**64位hex字符串**，FinOps `finops_processed_event.payload_digest`为**BINARY(32)**，消费者须严格校验长度/字符后把hex解码为32字节，不能拿hex UTF8的前32字节冒充。
 
@@ -33,7 +31,7 @@ Core `outbox_event` 是已提交的唯一事实源，RabbitMQ只是至少一次�
 
 SelfHosted运营成本 **不通过RabbitMQ假装有Core事件**。第五个指标 `SELF_HOSTED_OPERATING_COST` 仅源自FinOps本地 `self_hosted_operating_expense` 在另一管理员批准后写 `self_hosted_expense_revision` + 本地Fact/Aggregate；Void/更正为有符号delta，不DELETE已发布成本。`FINANCE_OPERATION_TEST_SETTLED`仅P4受限测试Profile使用，在真实P11 relay事件白名单外，错误发布必须隔离并告警。
 
-### 61.2 Core SourceEventPayloadV1字段级Schema
+### 3.2 Core SourceEventPayloadV1字段级Schema
 
 所有MQ消息外包络只能包含 `{eventId,outboxId,businessEventKey,aggregateType,aggregateId,aggregateRevision,eventType,schemaVersion:1,companyScopeId,businessAt,createdAt,payloadDigest,payload}`，无额外安全身份字段。**Core**以固定键排序、Decimal字符串、日期UTC稳定序列化 `payload` 并生成digest，FinOps仅对同一CanonicalBytes核对，不信客户端传来的digest。没有Prompt/Response/Key/EndpointURI/全文账单/Cookie/员工真实姓名。
 
@@ -50,7 +48,7 @@ SelfHosted运营成本 **不通过RabbitMQ假装有Core事件**。第五个指�
 
 **唯一JSON null规则**：上表不适用字段必须显式null；任何缺少规范必要字段、未知enum、精度不合、负的首次发行、日期不符、eventId/digest不符都拒绝并送隔离DLQ，FinOps不得「尽力解析并假装0」。`FINANCIAL_FACT_CORRECTED`包含真实目标`metricType`，其它金额类别不可跨币种或跨维度更正；需要更改归属则以受控冲正原事实+经审批的新增相应正确事实两笔留下完整链路。一个Event只生成一个Metric Fact；一个Invocation有Points和Provider成本时是两个**各自唯一**的Outbox Event，绝不把它们混合成一个“总支出”。
 
-### 61.3 源事件的生成/投递/消费状态机
+### 3.3 源事件的生成/投递/消费状态机
 
 - Core在确认Grant发行/真实用量结算/合法更正的**同一MySQL事务**写账户、Ledger、Outbox；待对账PENDING只在Core运营风险接口显示，不能创造`INVOCATION_USAGE_SETTLED`的已确认0事件。Outbox Relay按 `PENDING|RETRY` + nextAttemptAt选择短事务claim、`SELECT FOR UPDATE SKIP LOCKED`、唯一ownerToken/leaseUntil防并发双claim；commit后才执行Broker publish，不在账务DB事务等待Broker。
 - Relay只有同时获得 **ack-confirm且无mandatory return** 才可以CAS ownerToken把同一Outbox改PUBLISHED；Broker confirm到达但状态CAS丢失则仍可能重新投递，使用完全相同eventId、payloadDigest和businessEventKey。异常有限退避→RETRY；不可解析/未知版本→QUARANTINED或DLQ并报警，历史保留，绝不静默删除。选定retry参数为1s、5s、30s、120s、600s，超过5次转隔离并以人工修复后原eventId安全重投；这些是可测试运行默认非生产SLA。
@@ -58,7 +56,7 @@ SelfHosted运营成本 **不通过RabbitMQ假装有Core事件**。第五个指�
 - `consumer_name` 使用 `aigate.finops.projector.build.<buildId>` 明确区分当前active和building投影，因此V1 `finops_processed_event`表**不用额外加buildId列**；对应`finops_fact.build_id` 和`finops_daily_aggregate.build_id`必须一致。双版本重建期间同一源Event必须分别投影到两个buildId且各自Inbox去重。每个 `finops_fact`记录`sourceBusinessId/sourceRevision/metricType`唯一，不能用重复MQ提高funding总额。
 - 对已存在事实的真正纠错：append-only新的 `sourceRevision`与有符号 delta Fact；同一业务日/原Team旧快照回写新的Aggregate delta，不UPDATE原Fact，不把员工POINTS/货币/Token混加。事实与读模型可延迟，但绝不向Core回写账户/预算。数据库权限双向隔离。
 
-### 61.4 SourceManifestV1 和缺事件恢复的可执行合同
+### 3.4 SourceManifestV1 和缺事件恢复的可执行合同
 
 沿D41，Core受信 `GET /internal/v1/finops/source-manifest?fromOutboxId&toOutboxId&maxItems` 最多5000，在InnoDB一致性快照中返回**本时间快照可见的所有已提交Outbox事件** `eventId,outboxId,payloadDigest,eventType,schemaVersion`及 `snapshotAsOf,rangeStart,rangeEnd,count,manifestDigest,hasQuarantined`；禁止依赖自增ID连续/最后一条Outbox published就断言中间没缺。若窗口实际条数>5000、源账本主库无法提供一致快照、包含不可审计异常或合法更正尚未投影，不能返回"complete=true"；回409 MANIFEST_SNAPSHOT_TOO_LARGE或标UNKNOWN。
 
@@ -66,11 +64,11 @@ FinOps对active/building每一个 `eventId+payloadDigest` 验证Inbox与已产�
 
 `FRESH(asOf)`只能代表具体 `snapshotAsOf` 之前已核验源集合的完整读模型；Outbox有新提交更正晚于asOf、Broker lag、DLQ、SourceManifest过大或FinOps运营费用本地修订未核对，状态必须保守。对Core与FinOps两个MySQL分属独立读事务，输出 `coreFactsAsOf`和`localExpenseAsOf` 两个时间，不声称跨库同一瞬间原子。Core `/pending-exposure`仍可在FinOps停机时独立查询真实风险。
 
-### 61.5 真正可切换的 Read Model Build
+### 3.5 真正可切换的 Read Model Build
 
 `finops_read_model_state`已有 `active_build_id,building_build_id,lag_status` 单例行。开始rebuild时锁该单例行；新buildId从active/building/现有Inbox和Fact/Aggregate全部build历史的已见最大版本+1分配，禁止覆盖仍有历史行的旧build；创建building只改指针/状态。Building从Core真实安全事件历史清单+源补拉构建，旧Active继续服务已有已验证asOf。实时新事件至少投影到Active+Building各自Inbox；building若没通过直到切换时刻的manifest核验、存在pending/DLQ/来源不一致，保持REBUILDING或UNKNOWN，不切指针。切换在一个finops_db短事务中 CAS `active_build_id←verifiedBuildingId,building_build_id←null` 且保留旧build供回滚核对；其后旧数据按受控保留期清理，**不能删除任何尚需财务审计的真实来源事实**。
 
-### 61.6 运营费用是真实本地财务事实
+### 3.6 运营费用是真实本地财务事实
 
 P11 V1固定允许的费用类别：`GPU_RENT`、`DEPRECIATION`、`ELECTRICITY`、`HOSTING`、`OPERATIONS`；受信来源 `CLOUD_BILL`、`RENTAL_CONTRACT`、`ACCOUNTING_ADJUSTMENT`，按真实公司会计凭证Ref+SHA256二进制digest验证完整单自然月/币种/具体资源池/金额。Core当前GLOBAL PLATFORM_ADMIN先验身份/审计，FinOps再审双人分离（createdBy≠approverId）、自身source unique/idempotency/revision；审批时在本地同库同时写Expense/Revision/Fact/Aggregate/Audit。草稿不能算费用；Void追加负delta更正但保留原票据。**没有真实Cloud账单/租赁合同的Fake GPU环境只可产生测试数据，不能发布正式运营支出**；FinOps读模型中LOCAL_EXPENSE与CORE_EVENT采用不同`source_kind`，没有跨库全局事务可假装来源自动同步。
 
@@ -79,8 +77,7 @@ P11 V1固定允许的费用类别：`GPU_RENT`、`DEPRECIATION`、`ELECTRICITY`�
 
 
 
-## 4. 验收与不变量
-
+## 4. 验收标准与不可变条件
 - 资金不负、未知不报0；所有关键真实I/O失联都不能授权第二次Provider发送。
 - API字段与迁移真实列以[API设计](../06-api-design.md)、[DB目录](../05-database-design.md)为准；有冲突须提交总控修正。
 - 相应Phase真实负例/故障测试详见[测试策略](../09-test-plan.md)；当前NOT RUN。
