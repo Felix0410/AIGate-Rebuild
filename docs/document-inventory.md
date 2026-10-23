@@ -134,7 +134,7 @@ P0～P12各有一份，另设模块总索引。
 | [`docs/protocols/redis-admission.md`](./protocols/redis-admission.md) | 容量Pool Lua、Guard、调度公平与失效隔离 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/protocols/runtime-canonical.md`](./protocols/runtime-canonical.md) | CanonicalDTO/HMAC密钥与v1/v2/v3契约 | 文档静态核对；待相应Phase真实验证 |
 
-### 测试用例（4份）
+### 测试用例（5份）
 
 设计用例清单，不表示真实PASS。
 
@@ -143,13 +143,14 @@ P0～P12各有一份，另设模块总索引。
 | [`docs/tests/cases-p01-p03.md`](./tests/cases-p01-p03.md) | P1～P3组织、密钥与模型目录案例 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/tests/cases-p04-p07.md`](./tests/cases-p04-p07.md) | P4～P7额度、治理、Provider调用与Redis案例 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/tests/cases-p08-p12.md`](./tests/cases-p08-p12.md) | P8～P12路由、降级、紧急、FinOps与恢复案例 | 文档静态核对；待相应Phase真实验证 |
+| [`docs/tests/p00-technology-compatibility.md`](./tests/p00-technology-compatibility.md) | P0官方版本兼容矩阵、唯一Starter清单及COMP01～10真实PoC执行合同 | 官方文档静态核对；构建与运行待验证 |
 | [`docs/tests/design-audit-regressions.md`](./tests/design-audit-regressions.md) | P0审查修订涉及的跨Phase回归案例 | 文档静态核对；待相应Phase真实验证 |
 
-本次重新核验后的仓库共有 **71份Markdown文件**（原70份经重命名与内容修订，新增本清单1份），上述七组分别为17、12、5、12、14、7、4，合计71。
+本次重新核验后的仓库共有 **72份Markdown文件**（原70份经重命名与内容修订，新增本清单与P0技术审查2份），上述七组分别为17、12、5、12、14、7、5，合计72。
 
 ## 4. 全库链接和命名核验结果
 
-- 71/71份Markdown文件的相对链接均检查过目标路径存在，未发现断链；此次检查不涵盖网页外部链接的实时可用性及Markdown锚点存在性。
+- 原71份Markdown文件的相对链接已检查过目标路径存在；新增P0兼容性文档及本次更新链接需按当前仓库树再次复核，未发现断链；此次检查不涵盖网页外部链接的实时可用性及Markdown锚点存在性。
 - 顶层主章节00～13编号各出现一次；Phase p00～p12齐全，数据库core-v01～v11与finops-v01齐全；历史ADR不连续编号有明确保留理由。
 - 历史追加式Dxx/Rxx草稿不在当前树。部分测试caseId仍保留源设计编号以保障用例引用稳定，不表示旧草稿仍为权威。
 

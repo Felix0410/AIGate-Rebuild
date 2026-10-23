@@ -29,3 +29,7 @@ P1真实双服务和V1六表；P2运行双Key；P3密文长度和价格指针；
 ## 4. 证据记录
 
 每个case记录：caseId、Phase、Git SHA、JDK/Boot/MySQL/Redis/MQ具体镜像digest、执行命令、开始时间、passed/failed/skipped、网络ProviderHTTP发送次数、账务预留/已结/UNKNOWN、日志与trace的脱敏证明。真实尚未运行时仅标NOT_RUN或BLOCKED，不得填写0通过伪造测试结论。
+
+## P0技术兼容性现场验收
+
+P0-COMP01～COMP10必须按[兼容性矩阵与最小PoC合同](./tests/p00-technology-compatibility.md)逐项记录真实构建、数据库Flyway、MyBatis Mapper、Gateway精准安全路由、Jackson3及SSE分块证据；未运行时标NOT_RUN/BLOCKED。后续P7/P11/P12第一次引入的Redis、RabbitMQ、真实Provider仍由所属Phase另行验收。

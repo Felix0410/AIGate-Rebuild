@@ -11,7 +11,7 @@
 |---|---|
 | P1～P12业务/架构/62表及主API详细设计 | 已覆盖，完成一轮静态设计审查 |
 | D01～D56与R01～R10 | 有效合同已迁移至主题规范；旧逐次追加日志不再作为入口 |
-| Java21/Boot4/GatewayMVC/MyBatis-Plus组合PoC | NOT RUN |
+| Java21/Boot4/GatewayMVC/MyBatis-Plus组合PoC | 官方版本矩阵已核对；实际Maven/双Jar/HTTP **NOT RUN** |
 | MySQL8.4/Flyway真实迁移 | NOT RUN |
 | Redis Lua/Provider SSE/RabbitMQ/FinOps | NOT RUN |
 | 用户P0最终设计签收 | PENDING |
@@ -38,23 +38,29 @@
 - 12份数据库设计SQL文本：62个不同CREATE TABLE，136处REFERENCES目标均存在，13个ALTER目标均存在且建表先后顺序未发现前向引用。以上是**静态检查**，仍非实际MySQL/Flyway通过。
 - 规范衔接：修订Gateway/内部RPC的schema v1/v2/v3说明和P6内置RuleRegistry已定义事实。下一门禁仍是P0真实PoC和用户签收。
 
-## 4. 工作分工
+## 4. P0技术兼容性静态复核（2026-10-23）
+
+- 已根据Spring、MyBatis-Plus、MySQL、Maven官方资料形成[P0兼容性矩阵及COMP-01～10最小PoC执行合同](./tests/p00-technology-compatibility.md)。基线Boot4.1.1 + Cloud2025.1.3 + Gateway5.0.3 Server WebMVC + MyBatis-Plus3.5.17，保留Java21、MySQL8.4/Flyway和MavenWrapper3.9.16。
+- 发现并明确：Gateway5.x新Starter及`spring.cloud.gateway.server.webmvc.*`新前缀；MyBatis-Plus的Boot4专用Starter；Boot4默认Jackson3和Flyway需`flyway-mysql`；修订ADR-007中的Cloud 2025.1.2为2025.1.3安全维护版。
+- 现场执行环境只有JDK21，缺Maven与Docker，且无法连接Maven Central，因此P0构建/双Jar/MySQL/SSE真实验证均**NOT_RUN/BLOCKED**。此报告不完成P0门禁，不启动P1。
+
+## 5. 工作分工
 
 - 总控：所有架构/功能/字段/接口/权限/测试规格设计，以及GitHub正式文档。
 - 本地AI：收到明确当前Phase实施包后按规范写源码、Flyway、Redis Lua、测试和运行日志。发现冲突只反馈，不擅改正式docs/架构。
 - 用户：批准P0冻结，Phase交付后完成审查确认，选择是否进入下一Phase。
 
-## 5. 阶段结束审查顺序
+## 6. 阶段结束审查顺序
 
 功能检查 → Code Review → 测试检查 → 架构检查 → 技术债 → Progress → Architecture → ADR（如需）→ 知识点 → 面试表达，等待用户确认后下一Phase。
 
-## 6. 剩余有效门禁
+## 7. 剩余有效门禁
 
 1. 审查新主题文档是否准确覆盖已确定规则、API/表数量、Phase依赖及最新修订。
 2. 真实Java21/Boot4.1.1/Gateway MVC/MyBatis-Plus/MySQL8.4/Flyway最小工程兼容PoC，遇到不兼容总控重新决定技术版本/迁移方案。
 3. P0冻结由用户最终签收；其后才可给本地AI正式P1实施包。首次P7/P11/P12的全部故障测试仍归该Phase真实交付。
 
-## 7. 变更记录
+## 8. 变更记录
 
 - 2026-10-21/22：D01～D44，直接微服务、完整业务、迁移与RPC基本规则。
 - 2026-10-22/23：D45～D56，DTO、Provider/Redis/MQ/全局恢复合同。

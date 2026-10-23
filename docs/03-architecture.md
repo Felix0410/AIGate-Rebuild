@@ -58,7 +58,7 @@ P1仅前两应用；P11才部署第三个应用。按业务出现真实问题再
 | Redis8.4+Lua | 多Gateway的短期原子队列/租约 | JVM局部Semaphore不能跨节点 | 运行代次、物理资源恢复 |
 | RabbitMQ+Spring AMQP（P11） | Core→FinOps至少一次异步事实 | 避免FinOps越权访问Core DB | Outbox/Inbox/Manifest/重放 |
 
-技术边界与取舍详见 [ADR目录](./adr/README.md)；运行协议见 [Runtime Protocols](./07-runtime-protocols.md)。
+技术边界与取舍详见 [ADR目录](./adr/README.md)；P0具体Cloud2025.1.3/Gateway5.0.3/Boot4 Starter和真实门禁见[技术兼容性检查](./tests/p00-technology-compatibility.md)；运行协议见 [Runtime Protocols](./07-runtime-protocols.md)。
 
 ## 6. 按Phase的实际部署与失败边界
 

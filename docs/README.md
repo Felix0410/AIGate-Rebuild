@@ -6,6 +6,8 @@
 
 ## 一、从哪里开始
 
+**当前P0技术入口**：[Java21/Boot4/Cloud Gateway/MyBatis/MySQL/Flyway兼容性矩阵与本地AI PoC执行合同](./tests/p00-technology-compatibility.md)，静态核对已完成，真实PoC待执行。
+
 [全部文件清单与逐份审查结果](./document-inventory.md)列出每一份文档、命名规则、修订内容和仍未完成的工程验证门禁。
 
 **规范总入口**：[完整开发设计说明书](./00-development-specification.md)（从业务问题、三应用边界、数据、接口到P0～P12逐章阅读）；**设计冻结执行合同**：[P0检查与兼容PoC](./phases/p00.md)。
