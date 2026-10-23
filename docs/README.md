@@ -1,6 +1,9 @@
 # AIGate · 项目设计总览
 
-> **当前阶段：P0 设计与审查；新项目尚未开始编码。**
+
+> **设计完成度：P0 全量设计合同已整理至 D56（2026-10-23）；待用户最后签收，尚未 FROZEN。**
+> **当前实施事实：只有设计文档，没有Java/数据库迁移/Redis Lua/MQ工程或实际通过的测试；P1～P12均未开始。**
+> **最新设计规模：Core55张表（V1～V11）+ FinOps7张表（V1）=62张；本地AI负责以后按Phase写代码，总控负责全部设计和文档。**
 >
 > 新仓库：[Felix0410/AIGate-Rebuild](https://github.com/Felix0410/AIGate-Rebuild)。旧 AIGate 仓库只作历史备份，不再是新项目的事实来源。
 
@@ -31,7 +34,7 @@ AIGate 是**企业内部已有 Agent 的 AI 模型接入与治理平台**：统�
 
 ## 当前进度
 
-P0 文档已有总体框架，**尚未达到“全量设计冻结”的要求**：需补齐逐业务块的请求/响应 DTO、数据库表约束、资金和故障状态、逐块测试用例、全部任务合同、失败恢复和依赖关系等。新的业务块排序见《04-阶段与任务》，属于待讨论的重排提案。P1～P12 **均未启动**，没有新 Java 代码、数据库迁移或 CI 可作为已完成证据。所有公司具体预算、模型价格、真实供应商密钥均不编造。
+**截至2026-10-23：P0全部阶段设计已完成文档候选（D01～D56），但尚未获得用户最终签收，故仍NOT FROZEN。** P1～P12的业务、三服务边界、表/约束、API/权限、Redis/SSE/Provider/FinOps/灾难恢复、分Phase任务及失败测试规格均已有总控唯一实施口径；《03》D56优先于早期草案。全平台最新设计为 **Core V1～V11 55张表 + FinOps V1 7张表 = 62张**；P12才增加Core V11运营单例表，P1依旧只建六表。**项目工程代码尚未开始，SQL/Java/Redis/MQ真实测试全部NOT RUN。** 真实公司额度、Provider价/可信usage、企业出站地区和凭证按管理员后续批准配置，绝不能把测试值当生产事实。
 
 ## 本地准备
 
@@ -160,7 +163,7 @@ cd AIGate-Rebuild
 
 ### P0-D48～D50：P4～P12公开API字段化与请求HMAC版本安全修补（2026-10-22）
 
-《03》D48/D49把P4～P12所有阶段公开管理/Runtime/FinOps/运维路径汇为逐Method/DTO/权限/资金失败字段目录，仍保留P6内置RuleRegistry、P7真实Provider账务证据/Redis Lua、P11事件/凭证、P12运营状态的专门设计阻塞。D50发现并修复预检/派发HMAC在Core密钥轮换及P9/P10新字段扩展下的版本空白：规范Core V7 Invocation SQL增加 \`canonical_schema_version\`、\`payload_hmac_key_id\`，P7/v1、P9/v2、P10/v3严格升级；《02》ADR-027、《04》任务、《05》新增D50-01～28全未运行测试、《06》进度同步。数据库仍是**Core54 + FinOps7共61张设计表**，没有真的迁移。
+《03》D48/D49把P4～P12所有阶段公开管理/Runtime/FinOps/运维路径汇为逐Method/DTO/权限/资金失败字段目录，仍保留P6内置RuleRegistry、P7真实Provider账务证据/Redis Lua、P11事件/凭证、P12运营状态的专门设计阻塞。D50发现并修复预检/派发HMAC在Core密钥轮换及P9/P10新字段扩展下的版本空白：规范Core V7 Invocation SQL增加 `canonical_schema_version`、`payload_hmac_key_id`，P7/v1、P9/v2、P10/v3严格升级；《02》ADR-027、《04》任务、《05》新增D50-01～28全未运行测试、《06》进度同步。数据库仍是**Core54 + FinOps7共61张设计表**，没有真的迁移。
 
 **设计不是运行证据**。P0目前继续DESIGN IN PROGRESS/NOT FROZEN；P1～P12没有编码/真实测试。接下来集中完成P6 RuleRegistry、Provider使用量/费用上界、Redis Lua、MQ事件Schema、最终SQL和API交叉审查，以及最小MySQL/Maven/Boot4 GatewayMVC兼容PoC，才可申请P0最终冻结。
 
@@ -168,3 +171,17 @@ cd AIGate-Rebuild
 ### P0-D51：P6 Governance内置安全规则闭合候选（2026-10-22）
 
 《03》D51把P6无明确定义的RuleV1变为封闭内置检测器和出站矩阵，禁止执行AI自行采用任意脚本/未审核正则或第三方DLP；《02》ADR-028记选型原因与误报/漏报代价，《04》《05》《06》同步P6任务、9个NOT RUN用例和进度。**仍是P0文档方案，不是代码或测试通过**；需真实公司敏感类别/Provider地域审批和最终用户冻结。
+
+
+### P0-D52～D56：完整设计合同收口（2026-10-23）
+
+所有后续开发使用《03-数据与接口》D56**唯一有效实施口径**：
+
+- D52：P7安全Provider Adapter、Token可证明风险上界、可信usage与费率类别；受信Adapter配置持久化到V3 Deployment字段，不能由执行AI自造计价。
+- D53：Redis共享Lua Key/Pool Guard与admission_epoch，分P7 NORMAL/P9 LOW/P10 4:2:1，未知物理GPU任务不靠TTL自动释放。
+- D54：P11真实Core Outbox Wire EventSchema V1、RabbitMQ confirm/returns、FinOps Inbox/SourceManifest/安全补拉和双build读模型；五种指标按各自单位/归属独立计算。
+- D55：P12真正多Core全局停入场/恢复必须Core MySQL V11运营单例（**新1表**）+V11对V1审计表补幂等收据索引；设计总计 **62表**，不改变P1六表与P11第三服务时点。
+- D56：D01～D55旧草案的规范优先级、Runtime默认温度/TopP、事务/安全/错误/内部版本/阶段门禁最终统一。本地AI不得对多个历史方案任选或重设计。
+- 《02》ADR-029～032记录四项技术升级的动机/替代/收益/代价；《04》P1～P12每块任务、《05》新增全协议失败/竞态/恢复测试、《06》进度与协作、《01》业务边界全部同步。
+
+**当前状态**：DESIGN COMPLETE CANDIDATE / USER REVIEW PENDING / ENGINEERING NOT VERIFIED；全部代码、实际Flyway和集成测试都未做。用户批准设计后才可下发本地AI执行工程兼容PoC及P1工作包，不自动跳转下一Phase。历史章节里旧“Core54/合计61/P12零表/尚需Provider或Redis方案”的文字仅描述当时设计状态，**以本节和《03》D56为最新有效事实**。
