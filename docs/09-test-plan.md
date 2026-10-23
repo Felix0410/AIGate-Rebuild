@@ -32,4 +32,6 @@ P1真实双服务和V1六表；P2运行双Key；P3密文长度和价格指针；
 
 ## P0技术兼容性现场验收
 
-P0-COMP01～COMP10必须按[兼容性矩阵与最小PoC合同](./tests/p00-technology-compatibility.md)逐项记录真实构建、数据库Flyway、MyBatis Mapper、Gateway精准安全路由、Jackson3及SSE分块证据；未运行时标NOT_RUN/BLOCKED。后续P7/P11/P12第一次引入的Redis、RabbitMQ、真实Provider仍由所属Phase另行验收。
+P0由用户在IntelliJ IDEA亲自搭建和运行，不交给本地AI；参照[手把手IDEA指南](./guides/p00-idea-hands-on.md)。P0-COMP01～COMP10必须按[兼容性矩阵与最小PoC合同](./tests/p00-technology-compatibility.md)逐项记录真实构建、数据库Flyway、MyBatis Mapper、Gateway精准安全路由、Jackson3及SSE分块证据；未运行时标NOT_RUN/BLOCKED。后续P7/P11/P12第一次引入的Redis、RabbitMQ、真实Provider仍由所属Phase另行验收。
+
+P1～P12的E01～E04为**一个Phase同一交付内的测试和验收维度**，不代表必须拆成四次提交。只有完整阶段测试与业务审查通过，才能由用户签收。

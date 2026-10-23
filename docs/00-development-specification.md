@@ -101,9 +101,9 @@ Core V1～V11 合计 **55 张表**；P11 独立 FinOps V1 **7 张表**；全设�
 
 ## 9. 开发、测试、评审与冻结流程
 
-本地 AI 的职责是**执行确定好的当前 Phase 合同**：交付 Java、Mapper、Flyway、容器配置、Lua/MQ/Provider Adapter（如果当期需要）、测试及命令/日志，而不是再设计业务字段或替总控维护正式文档。
+本地 AI 从**P1开始执行已批准的完整当前Phase合同**（P0由用户在IntelliJ IDEA亲手完成，总控逐步指导）：交付 Java、Mapper、Flyway、容器配置、Lua/MQ/Provider Adapter（如果当期需要）、测试及命令/日志，而不是再设计业务字段或替总控维护正式文档。
 
-每个 Phase 从最短可运行 Happy Path 打通本次业务；同一 Phase 再补齐已经承诺的校验、授权、并发、幂等、安全失败和真实测试，不让跨阶段核心安全规则永久拖欠。每轮结束依次完成：功能检查、Code Review、真实测试、架构检查、技术债登记、Progress 更新、Architecture 更新、必要 ADR、知识总结与面试表达；**用户确认后才进入下一阶段**。
+每个 Phase 从最短可运行 Happy Path 打通本次业务；同一 Phase 再补齐已经承诺的校验、授权、并发、幂等、安全失败和真实测试，不让跨阶段核心安全规则永久拖欠。**每个Phase默认一次完整代码交付和集中Review；**E01～E04是同一Phase内验收项，不是四次必须独立提交的工作包。每轮结束依次完成：功能检查、Code Review、真实测试、架构检查、技术债登记、Progress 更新、Architecture 更新、必要 ADR、知识总结与面试表达；**用户确认后才进入下一阶段**。
 
 测试证据必须带 Git SHA、Java/镜像版本、复现命令、测试编号、PASS/FAIL/SKIP、Provider HTTP 实际发送次数与关键资金状态。未运行标 NOT_RUN，缺环境标 BLOCKED；不能用静态推导冒充 MySQL/Redis/Provider 的真实通过。详见[测试计划](./09-test-plan.md)、[协作规范](./13-collaboration.md)、[Progress](./10-progress.md)。
 
@@ -116,4 +116,4 @@ Core V1～V11 合计 **55 张表**；P11 独立 FinOps V1 **7 张表**；全设�
 - 不删除尚未迁移的规则；已被现行文档覆盖的历史 Dxx/Rxx 草稿只从 Git 历史追溯，不再作为实现输入。当前文档可合并同类章节，但不得丢弃唯一的失败边界或测试条件。
 - P0兼容基线的官方版本支持证据与实际PoC验收由[技术兼容性检查](./tests/p00-technology-compatibility.md)追踪；其静态SUPPORTED不等于Maven/容器/真实HTTP PASS。
 
-首次理解项目按本说明书从第1节顺读。实际开发只需要当前 Phase 文档及其关联 SQL/API/协议/测试规范，不需要靠聊天记录拼接指令。
+P0实际IDEA操作按[手把手P0指南](./guides/p00-idea-hands-on.md)逐节点完成，不委托本地AI。首次理解项目按本说明书从第1节顺读。实际开发只需要当前 Phase 文档及其关联 SQL/API/协议/测试规范，不需要靠聊天记录拼接指令。

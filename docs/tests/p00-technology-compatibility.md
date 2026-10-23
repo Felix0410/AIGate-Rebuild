@@ -1,6 +1,6 @@
 # P0 · 技术兼容性核查及最小工程 PoC 执行合同
 
-> 日期：2026-10-23；状态：**官方版本兼容声明已核实（STATIC_SUPPORTED），实际构建、MySQL迁移、HTTP/SSE仍NOT_RUN**。不将本文视为P0验收通过。这里是本地执行AI的实施边界，总控独占修改正式架构规范的权力。
+> 日期：2026-10-23；状态：**官方版本兼容声明已核实（STATIC_SUPPORTED），实际构建、MySQL迁移、HTTP/SSE仍NOT_RUN**。不将本文视为P0验收通过。这里是项目负责人**亲自使用IntelliJ IDEA**实现并验证的技术验收规范；P0不交给本地AI。总控指导操作并独占修改正式架构规范。IDEA操作顺序详见[手把手指南](../guides/p00-idea-hands-on.md)。
 
 ## 1. 业务问题与范围
 
@@ -24,7 +24,7 @@ AIGate计划从P1部署两个独立Java服务：Gateway只负责公开入口、�
 
 **补丁与风险记录**：Spring Boot **4.1.2于2026-10-22发布**，目前暂不改变已批准的Boot4.1.1 P0比较基线；如果升级必须实际A/B重跑本合同并由总控修订ADR。Spring Cloud 2025.1.3是对同一已支持列车的修复更新，替换原ADR 2025.1.2（包括安全修复），由BOM统一管理Gateway5.0.3，禁止手写另一个Gateway版本。P0静态支持≠项目真实PASS。
 
-## 3. 给本地AI的精确依赖决策
+## 3. IDEA手工搭建工程的精确依赖决策
 
 根工程最小构成：根`pom.xml`（parent `org.springframework.boot:spring-boot-starter-parent:4.1.1`、`java.version=21`、Cloud BOM `org.springframework.cloud:spring-cloud-dependencies:2025.1.3`）、`mvnw/mvnw.cmd/.mvn/wrapper`固定Maven3.9.16、`aigate-gateway/pom.xml`、`aigate-core/pom.xml`。
 
@@ -50,7 +50,7 @@ P0只做`p0-compat`测试profile：Gateway容器和Core是两个独立JVM，Core
 
 P0无需提前实现P1管理Key/Bootstrap实体的完整流程。临时认证可在隔离本地容器网络采用随机环境变量凭证与HTTP Basic，但绝不提交密钥、不可在非`p0-compat` profile注册控制器，P1开始前移除临时端点/账号；不能声称这种认证是正式mgt_体系。PoC不可使用H2替代实际MySQL，不使用伪造“已验证”日志。
 
-## 5. P0-COMP逐项真实验收
+## 5. P0-COMP逐项真实验收（用户亲自在IDEA操作，教学节点不拆提交）
 
 | 编号 | 实际动作 | 判定条件 |
 |---|---|---|
@@ -65,13 +65,13 @@ P0无需提前实现P1管理Key/Bootstrap实体的完整流程。临时认证可
 | COMP-09 | Core停止、MySQL中断、重启复测 | 安全失败，不返回假200，不导致临时认证泄露 |
 | COMP-10 | 不启用`p0-compat` profile访问临时接口 | 必须不可见；记录PoC清理计划 |
 
-P0-COMP08是Gateway技术路线的重要验收，不代表P7真实Provider费用或Exactly-Once已证明。若有重要COMP失败，保持P0 NOT_FROZEN并将精确堆栈/最小复现送总控；不得让本地AI自行更换架构或技术。
+P0-COMP08是Gateway技术路线的重要验收，不代表P7真实Provider费用或Exactly-Once已证明。若有重要COMP失败，保持P0 NOT_FROZEN并将精确堆栈/最小复现送总控；不得让在IDEA中自行更换架构或技术。
 
 ## 6. 证据必须提交
 
 至少提交`p0-evidence/environment.md`（OS/JDK/镜像版本和SHA）、`dependency-tree.txt`、`reactor-verify.log`、`flyway-mysql.log`、`http-allowlist.log`、`sse-timing.log`、`test-results.md`（COMP01～10逐项PASS/FAIL/BLOCKED及命令）、`technical-debt.md`。日志脱敏，测试真实输出不能由AI生成样例冒充。正式文档仅总控修改。
 
-**本次检查环境**：可执行OpenJDK21；`mvn`与Docker均不存在，且无法解析Maven Central域名下载依赖。因此本次**只完成静态官方版本核验**，没有任何Java构建、Docker/MySQL、Flyway、Gateway或SSE的真实PASS。P0仍NOT_FROZEN。
+**静态核查所在的总控环境（非用户IDEA电脑）**：可执行OpenJDK21；`mvn`与Docker均不存在，且无法解析Maven Central域名下载依赖。因此此前**只完成静态官方版本核验**，没有任何Java构建、Docker/MySQL、Flyway、Gateway或SSE的真实PASS。P0仍NOT_FROZEN。
 
 ## 7. 官方证据
 

@@ -2,11 +2,11 @@
 
 > **文档体系版本：v1.0 · 2026-10-23**  
 > **当前状态：P0 详细设计重组完成候选，待用户正式冻结；P1～P12 尚未启动。**  
-> 本仓库的正式文档以**业务主题和模块**组织，不再按聊天/设计日期逐段追加。所有源码、Flyway、Redis Lua和自动化测试由本地AI按批准的Phase实施；设计和文档只由总控维护。
+> 本仓库的正式文档以**业务主题和模块**组织，不再按聊天/设计日期逐段追加。**P0由用户在IntelliJ IDEA亲手创建工程并完成PoC，总控逐步教学；P1～P12源码、Flyway、Redis Lua与自动化测试由本地AI按完整Phase合同实施。**设计和文档始终由总控维护。
 
 ## 一、从哪里开始
 
-**统一开发执行流程**：[Phase开发、任务下发、Git Review、知识讲解和用户签收](./13-collaboration.md#7-实际开发工作流唯一执行闭环)；当前只准备[P0-A至P0-C](./13-collaboration.md#8-立即执行的p0工作包顺序不是p1编码)，不开始P1业务编码。
+**P0当前操作步骤**：[IDEA手把手克隆仓库、配JDK、搭Maven双模块与真实验证](./guides/p00-idea-hands-on.md)。**统一开发执行流程**：[Phase开发、任务下发、Git Review、知识讲解和用户签收](./13-collaboration.md#7-实际开发工作流唯一执行闭环)；当前P0由你亲手完成，不交给本地AI；P1～P12默认一个Phase一次完整交付，避免机械拆分。
 
 **当前P0技术入口**：[Java21/Boot4/Cloud Gateway/MyBatis/MySQL/Flyway兼容性矩阵与本地AI PoC执行合同](./tests/p00-technology-compatibility.md)，静态核对已完成，真实PoC待执行。
 
@@ -64,7 +64,7 @@
 | 开发状态 | P0设计已审查并重组；没有实际业务源码、迁移结果或通过的CI |
 | 测试状态 | 真实Java/Boot/MySQL/Redis/RabbitMQ/Provider工程验证均NOT RUN |
 | 设计冻结 | 等待用户签收，不能仅凭文档存在声称P0 FROZEN |
-| 分工 | 总控维护设计与文档；本地AI只执行确定的当前Phase编码和真实验证 |
+| 分工 | P0用户在IDEA亲自操作、总控指导；P1～P12本地AI按整Phase编码与测试；总控维护正式设计/Review |
 
 ## 四、规范优先级与修订
 
