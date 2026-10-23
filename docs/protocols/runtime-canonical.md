@@ -13,9 +13,9 @@ P7 v1只含model/stream/messages/max_tokens/temperature/top_p；P9 v2增加fallb
 ## 3. 字段、状态、失败与恢复详细合同
 
 
-**发现的具体缺口**：D42只保存 `invocation.payload_hmac_digest`，未记计算此摘要所用的 Core HMAC KeyId。如果Preflight后运维轮换密钥，Permit时按新Key复算即使messages完全不变也会误判409；若尝试绕过比较，则允许请求被静默替换。P9又增加 `fallback_mode`、P10增加审批ID/TaskRef，如果HMAC只覆盖D42原六字段，则新关键授权语义不被「同一请求」保护。**修正已直接应用到上文规范 Core V7 CREATE TABLE invocation**：新增 `canonical_schema_version SMALLINT UNSIGNED NOT NULL DEFAULT 1`、`payload_hmac_key_id VARCHAR(32) NOT NULL`，CHECK schemaVersion 1～3；表数量不变。并非已运行的Flyway变更；若真实V7已经发布，则只能走后续ALTER新迁移。本Rebuild新仓库尚无真实V7执行记录。
+**强制持久化规范**：Core V7 的 invocation 必须保存 canonical_schema_version、payload_hmac_key_id 和 payload_hmac_digest；Key轮换期间Permit必须以原KeyId和原Schema版本校验，不能回退新密钥或忽略P9/P10新增授权字段。这些字段已纳入Core V7设计SQL，但仍须在实际Flyway迁移中验证。
 
-### 57.1 不兼容语义必须提高 RPC Schema Version
+### 3.1 不兼容语义与 RPC Schema Version
 
 | Phase | Gateway→Core preflight/dispatch-permits 的schemaVersion | Canonical字段（按序、明确纳入HMAC） | 能否接受 |
 |---|---:|---|---|
@@ -31,7 +31,7 @@ P7 v1只含model/stream/messages/max_tokens/temperature/top_p；P9 v2增加fallb
 - 重复Idempotency-Key请求：必须用**首次存的canonicalSchemaVersion**进行可比的请求语义比较。一个相同业务V1请求在P9升级至V2但不要求LOW时，Core应可通过受控版本兼容映射与首次Key的字段默认值比较；如任何可能影响实际可用模型/资金/执行许可的字段差异，409 IDEMPOTENCY_CONFLICT且不派发。禁止直接取当前schemaVersion重新生成另一个操作使同Key重复执行。
 - D42既有六RPC地址不变；P9/P10只扩展内部强类型DTO和协商v2/v3，响应 `schemaVersion` 必须回显本次支持的版本，不把v1 extra字段默默丢弃。Core与Gateway混部升级时先发布可验证的Core向后兼容版本，再放开Gateway新字段；不支持的版本400 UNSUPPORTED_SCHEMA_VERSION，不能退回宽松解析。
 
-### 57.2 对应P9/P10真实持久状态
+### 3.2 P9/P10 真实持久状态
 
 Core Invocation P9 V9仍按D43加 `actual_model_id`、`fallback_route_policy_id`、`fallback_policy_revision`、`funding_mode`；P10 V10仍加 `emergency_authorization_id`、`emergency_task_ref`。这些不是替代本次HMAC 2列，而是持久化实际资金/授权历史快照；**Core的Permit与账务预留同事务**核验相同schemaVersion/TaskRef/AuthorizationID与真实当前ACL/Policy/Pool/Provider采购预算。历史 NORMAL v1 可正常读取；P9必须v2授权LOW，P10必须v3授权EMERGENCY。FinOps事件只报告允许的任务关联安全元数据，不能包含RequestDigestKey、Task详情Prompt或机密内容。
 

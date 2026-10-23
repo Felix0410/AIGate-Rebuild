@@ -6,6 +6,8 @@
 
 ## 一、从哪里开始
 
+**规范总入口**：[完整开发设计说明书](./00-development-specification.md)（从业务问题、三应用边界、数据、接口到P0～P12逐章阅读）；**设计冻结执行合同**：[P0检查与兼容PoC](./phases/p00.md)。
+
 - **第一次了解项目**：读[项目总览](./01-project-overview.md) → [需求规格](./02-requirements.md) → [架构](./03-architecture.md) → [Roadmap](./08-roadmap.md)。
 - **准备实施某个Phase**：读[模块设计索引](./06-module-design.md)选对应Phase → 该Phase的数据库版本 → API分册 → 涉及的协议 → 对应测试。
 - **需要解释架构选型**：读[ADR](./adr/README.md)，每篇都记录背景/候选/收益/代价。
@@ -15,6 +17,7 @@
 
 | 类别 | 文档 | 内容 |
 |---|---|---|
+| 总说明 | [00 Development Specification](./00-development-specification.md) / [P0执行合同](./phases/p00.md) | 连贯的业务与开发合同、设计冻结及PoC门禁 |
 | 产品 | [01 Project Overview](./01-project-overview.md) | 定位、业务闭环、范围 |
 | 需求 | [02 Requirements](./02-requirements.md) | FR/NFR、角色、边界、不变量 |
 | 架构 | [03 Architecture](./03-architecture.md) | 三应用/信任边界/数据归属/技术 |

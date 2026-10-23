@@ -6,7 +6,7 @@
 
 ## 开发文档入口
 
-[进入完整技术与开发文档](./docs/README.md)
+[从头阅读完整开发设计说明书](./docs/00-development-specification.md) · [全部专题规范目录](./docs/README.md)
 
 文档已按产品、需求、架构、领域、数据库版本、API、协议、Phase、测试、ADR 分册组织。全部 62 张表的规范建表 SQL 设计位于 `docs/database/`。每个业务 Phase 的执行依据位于 `docs/phases/`。
 
