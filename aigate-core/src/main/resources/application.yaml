@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: aigate-core
+  config:
+    import: optional:file:${AIGATE_ENV_FILE:.env}[.properties]
+  datasource:
+    url: ${AIGATE_DB_URL:jdbc:mysql://127.0.0.1:3306/core_db?connectionTimeZone=UTC&connectTimeout=3000&socketTimeout=3000}
+    username: ${AIGATE_DB_USERNAME}
+    password: ${AIGATE_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 3000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    user: ${AIGATE_FLYWAY_USERNAME}
+    password: ${AIGATE_FLYWAY_PASSWORD}
+    validate-on-migrate: true
+    clean-disabled: true
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+server:
+  address: ${AIGATE_BIND_ADDRESS:127.0.0.1}
+  port: ${AIGATE_CORE_PORT:8081}
+  forward-headers-strategy: none
+  error:
+    include-message: never
+    include-stacktrace: never
