@@ -1,0 +1,67 @@
+services:
+  mysql:
+    image: aigate-mysql-ci:p1
+    build:
+      context: ..
+      dockerfile: infra/mysql.Dockerfile
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?required}
+      MYSQL_DATABASE: core_db
+      AIGATE_DB_PASSWORD: ${AIGATE_DB_PASSWORD:?required}
+      AIGATE_FLYWAY_PASSWORD: ${AIGATE_FLYWAY_PASSWORD:?required}
+      TZ: UTC
+    tmpfs:
+      - /var/lib/mysql
+    networks: [private]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysql --protocol=TCP -h 127.0.0.1 -uroot -Nse 'SELECT 1' core_db >/dev/null 2>&1"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+  migrate:
+    image: aigate-core:p1
+    build:
+      context: ..
+      dockerfile: aigate-core/Dockerfile
+    entrypoint: ["java", "-Dloader.main=com.felix.aigatecore.migration.MigrationApplication", "-cp", "/app/app.jar", "org.springframework.boot.loader.launch.PropertiesLauncher"]
+    environment:
+      AIGATE_DB_URL: jdbc:mysql://mysql:3306/core_db?connectionTimeZone=UTC
+      AIGATE_FLYWAY_USERNAME: aigate_migrator
+      AIGATE_FLYWAY_PASSWORD: ${AIGATE_FLYWAY_PASSWORD:?required}
+    depends_on:
+      mysql: {condition: service_healthy}
+    networks: [private]
+  core:
+    image: aigate-core:p1
+    build:
+      context: ..
+      dockerfile: aigate-core/Dockerfile
+    environment:
+      AIGATE_BIND_ADDRESS: 0.0.0.0
+      AIGATE_DB_URL: jdbc:mysql://mysql:3306/core_db?connectionTimeZone=UTC&connectTimeout=3000&socketTimeout=3000
+      AIGATE_DB_USERNAME: aigate_app
+      AIGATE_DB_PASSWORD: ${AIGATE_DB_PASSWORD:?required}
+      AIGATE_FLYWAY_ENABLED: "false"
+      AIGATE_SERVICE_TOKEN: ${AIGATE_SERVICE_TOKEN:?required}
+      AIGATE_MANAGEMENT_PEPPER: ${AIGATE_MANAGEMENT_PEPPER:?required}
+      AIGATE_BOOTSTRAP_MODE: ${AIGATE_BOOTSTRAP_MODE:-OFF}
+      AIGATE_BOOTSTRAP_TOKEN: ${AIGATE_BOOTSTRAP_TOKEN:-}
+      AIGATE_BOOTSTRAP_ALLOWED_CIDRS: ${AIGATE_BOOTSTRAP_ALLOWED_CIDRS:-}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    networks: [private]
+  gateway:
+    image: aigate-gateway:p1
+    build:
+      context: ..
+      dockerfile: aigate-gateway/Dockerfile
+    environment:
+      AIGATE_BIND_ADDRESS: 0.0.0.0
+      AIGATE_CORE_URL: http://core:8081
+      AIGATE_SERVICE_TOKEN: ${AIGATE_SERVICE_TOKEN:?required}
+    ports: ["127.0.0.1:${AIGATE_CI_PORT:-18080}:8080"]
+    depends_on: [core]
+    networks: [public, private]
+networks:
+  private: {internal: true}
+  public: {}

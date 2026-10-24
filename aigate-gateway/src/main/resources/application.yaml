@@ -1,6 +1,18 @@
 spring:
   application:
     name: aigate-gateway
+  http:
+    clients:
+      connect-timeout: 2s
+      read-timeout: 10s
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          forwarded-request-headers-filter:
+            enabled: false
+          x-forwarded-request-headers-filter:
+            enabled: false
 server:
   address: ${AIGATE_BIND_ADDRESS:127.0.0.1}
   port: ${AIGATE_GATEWAY_PORT:8080}

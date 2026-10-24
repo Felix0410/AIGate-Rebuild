@@ -10,11 +10,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       connection-timeout: 3000
+      connection-init-sql: "SET time_zone = '+00:00'"
   flyway:
-    enabled: true
+    enabled: ${AIGATE_FLYWAY_ENABLED:true}
     locations: classpath:db/migration
-    user: ${AIGATE_FLYWAY_USERNAME}
-    password: ${AIGATE_FLYWAY_PASSWORD}
+    user: ${AIGATE_FLYWAY_USERNAME:}
+    password: ${AIGATE_FLYWAY_PASSWORD:}
     validate-on-migrate: true
     clean-disabled: true
   jackson:
@@ -27,3 +28,8 @@ server:
   error:
     include-message: never
     include-stacktrace: never
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    arg-name-based-constructor-auto-mapping: true

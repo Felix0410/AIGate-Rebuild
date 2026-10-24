@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC '-//mybatis.org//DTD Mapper 3.0//EN'  'https://mybatis.org/dtd/mybatis-3-mapper.dtd'>
+<mapper namespace="com.felix.aigatecore.identity.IdentityMapper">
+    <!-- 所有管理写操作先锁定已有单例行，再在同一事务内复查授权，不能依赖不存在记录的间隙锁。 -->
+    <select id="lockBootstrapControl" resultType="map">
+        SELECT id, initialized_at AS initializedAt
+        FROM bootstrap_control
+        WHERE id=1
+        FOR UPDATE
+    </select>
+    <update id="initializeBootstrapControl">
+        UPDATE bootstrap_control
+        SET initialized_at=UTC_TIMESTAMP(6),
+        initialized_by_employee_id=#{employeeId},
+        version=version+1,
+        updated_at=UTC_TIMESTAMP(6)
+        WHERE id=1
+            AND initialized_at IS NULL
+    </update>
+    <select id="selectTeamById" resultType="com.aigate.contracts.dto.TeamDTO">
+        SELECT id, name, status, version, created_at, updated_at
+        FROM team
+        WHERE id=#{id}
+    </select>
+    <select id="selectEmployeeById" resultType="com.aigate.contracts.dto.EmployeeDTO">
+        SELECT id, employee_code, display_name, primary_team_id, status, version, created_at, updated_at
+        FROM employee
+        WHERE id=#{id}
+    </select>
+    <select id="selectEmployeeByCode" resultType="com.aigate.contracts.dto.EmployeeDTO">
+        SELECT id, employee_code, display_name, primary_team_id, status, version, created_at, updated_at
+        FROM employee
+        WHERE employee_code=#{code}
+    </select>
+    <select id="listRoleAssignments" resultType="com.aigate.contracts.dto.RoleAssignmentDTO">
+        SELECT role_code,scope_type,scope_id
+        FROM role_assignment
+        WHERE employee_id=#{employeeId}
+            AND revoked_at IS NULL
+        ORDER BY id
+    </select>
+    <select id="listVisibleTeamIds" resultType="long">
+        SELECT r.scope_id
+        FROM role_assignment r
+        JOIN team t ON t.id=r.scope_id
+            AND t.status='ACTIVE'
+        WHERE r.employee_id=#{employeeId}
+            AND r.role_code='TEAM_MANAGER'
+            AND r.scope_type='TEAM'
+            AND r.revoked_at IS NULL
+        ORDER BY r.scope_id
+    </select>
+    <select id="countActiveEmployeesByTeamId" resultType="int">
+        SELECT COUNT(*)
+        FROM employee
+        WHERE primary_team_id=#{teamId}
+            AND status='ACTIVE'
+    </select>
+    <select id="countActiveGlobalAdministrators" resultType="int">
+        SELECT COUNT(DISTINCT e.id)
+        FROM employee e
+        JOIN team t ON t.id=e.primary_team_id
+        JOIN role_assignment r ON r.employee_id=e.id
+        WHERE e.status='ACTIVE'
+            AND t.status='ACTIVE'
+            AND r.role_code='PLATFORM_ADMIN'
+            AND r.scope_type='GLOBAL'
+            AND r.scope_id=0
+            AND r.revoked_at IS NULL
+    </select>
+    <insert id="insertTeam" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO team(name,status,version,created_at,updated_at)
+        VALUES(#{name},'ACTIVE',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))
+    </insert>
+    <insert id="insertEmployee" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO employee(employee_code,display_name,primary_team_id,status,version,created_at,updated_at)
+        VALUES(#{employeeCode},#{displayName},#{primaryTeamId},'ACTIVE',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))
+    </insert>
+    <update id="updateTeam">
+        UPDATE team
+        SET name=#{name},status=#{status},version=version+1,updated_at=UTC_TIMESTAMP(6)
+        WHERE id=#{id}
+            AND version=#{expectedVersion}
+    </update>
+    <update id="updateEmployee">
+        UPDATE employee
+        SET display_name=#{displayName},
+        primary_team_id=#{primaryTeamId},
+        status=#{status},
+        version=version+1,
+        updated_at=UTC_TIMESTAMP(6)
+        WHERE id=#{id}
+            AND version=#{expectedVersion}
+    </update>
+    <!-- 分页列表与 COUNT 复用同一权限过滤；没有可见团队时必须返回空集。 -->
+    <sql id="teamWhere">
+        <where>
+            <if test="status != null">
+                AND status=#{status}
+            </if>
+            <if test="!admin">
+                AND status='ACTIVE'
+                    AND
+                <choose>
+                    <when test="visibleTeams.size() > 0">
+                        id IN
+                        <foreach collection="visibleTeams" item="id" open="(" close=")" separator=",">
+                            #{id}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        1=0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </sql>
+    <select id="listTeams" resultType="com.aigate.contracts.dto.TeamDTO">
+        SELECT id, name, status, version, created_at, updated_at
+        FROM team
+        <include refid="teamWhere"/>
+        ORDER BY id
+        LIMIT #{size}
+        OFFSET #{offset}
+    </select>
+    <select id="countTeams" resultType="long">
+        SELECT COUNT(*)
+        FROM team
+        <include refid="teamWhere"/>
+    </select>
+    <!-- 员工查询先限定可见团队，再计算总数和分页，防止通过 total 泄露组织数据。 -->
+    <sql id="employeeWhere">
+        <where>
+            <if test="status != null">
+                AND status=#{status}
+            </if>
+            <if test="primaryTeamId != null">
+                AND primary_team_id=#{primaryTeamId}
+            </if>
+            <if test="!admin">
+                AND
+                <choose>
+                    <when test="visibleTeams.size() > 0">
+                        primary_team_id IN
+                        <foreach collection="visibleTeams" item="id" open="(" close=")" separator=",">
+                            #{id}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        1=0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </sql>
+    <select id="listEmployees" resultType="com.aigate.contracts.dto.EmployeeDTO">
+        SELECT id, employee_code, display_name, primary_team_id, status, version, created_at, updated_at
+        FROM employee
+        <include refid="employeeWhere"/>
+        ORDER BY id
+        LIMIT #{size}
+        OFFSET #{offset}
+    </select>
+    <select id="countEmployees" resultType="long">
+        SELECT COUNT(*)
+        FROM employee
+        <include refid="employeeWhere"/>
+    </select>
+    <select id="countActiveRoleAssignments" resultType="int">
+        SELECT COUNT(*)
+        FROM role_assignment
+        WHERE employee_id=#{employeeId}
+            AND role_code=#{roleCode}
+            AND scope_type=#{scopeType}
+            AND scope_id=#{scopeId}
+            AND revoked_at IS NULL
+    </select>
+    <insert id="grantRole">
+        INSERT INTO role_assignment(employee_id,role_code,scope_type,scope_id,revoked_at,created_at,updated_at)
+        VALUES(#{employeeId},#{roleCode},#{scopeType},#{scopeId},NULL,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))
+        ON DUPLICATE KEY UPDATE revoked_at=NULL,updated_at=UTC_TIMESTAMP(6)
+    </insert>
+    <update id="revokeRole">
+        UPDATE role_assignment
+        SET revoked_at=UTC_TIMESTAMP(6),updated_at=UTC_TIMESTAMP(6)
+        WHERE employee_id=#{employeeId}
+            AND role_code=#{roleCode}
+            AND scope_type=#{scopeType}
+            AND scope_id=#{scopeId}
+            AND revoked_at IS NULL
+    </update>
+    <!-- 内部鉴权元数据显式列出字段，secret_digest 仅用于 WHERE 匹配，不作为查询结果返回。 -->
+    <sql id="credentialColumns">
+        id,
+        employee_id,
+        key_prefix,
+        pepper_key_id,
+        expires_at,
+        revoked_at,
+        created_at,
+        issued_actor_type,
+        issued_actor_id,
+        issue_idempotency_key
+    </sql>
+    <select id="selectCredentialByDigest" resultType="com.felix.aigatecore.identity.ManagementCredentialDO">
+        SELECT
+        <include refid="credentialColumns"/>
+        FROM management_credential
+        WHERE secret_digest=#{digest}
+            AND pepper_key_id=#{pepperKeyId}
+    </select>
+    <!-- 签发幂等事实永久保留；查询结果不含密钥明文，重复请求不能重放秘密。 -->
+    <select id="selectIssuedCredential" resultType="com.felix.aigatecore.identity.ManagementCredentialDO">
+        SELECT
+        <include refid="credentialColumns"/>
+        FROM management_credential
+        WHERE issued_actor_type=#{actorType}
+            AND issued_actor_id=#{actorId}
+            AND issue_idempotency_key=#{key}
+    </select>
+    <select id="selectCredentialById" resultType="com.felix.aigatecore.identity.ManagementCredentialDO">
+        SELECT
+        <include refid="credentialColumns"/>
+        FROM management_credential
+        WHERE id=#{id}
+    </select>
+    <insert id="insertCredential" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO management_credential(employee_id,key_prefix,secret_digest,pepper_key_id,expires_at,issued_actor_type,issued_actor_id,issue_idempotency_key,created_at)
+        VALUES(#{employeeId},#{keyPrefix},#{digest},#{pepperKeyId},#{expiresAt},#{actorType},#{actorId},#{key},UTC_TIMESTAMP(6))
+    </insert>
+    <update id="revokeCredential">
+        UPDATE management_credential
+        SET revoked_at=UTC_TIMESTAMP(6)
+        WHERE id=#{id}
+            AND revoked_at IS NULL
+    </update>
+    <select id="listCredentialMetadata" resultType="com.aigate.contracts.dto.ManagementCredentialMetadataDTO">
+        SELECT id,key_prefix,expires_at,revoked_at,created_at
+        FROM management_credential
+        WHERE employee_id=#{employeeId}
+        ORDER BY id
+        LIMIT #{size}
+        OFFSET #{offset}
+    </select>
+    <select id="countCredentialsByEmployeeId" resultType="long">
+        SELECT COUNT(*)
+        FROM management_credential
+        WHERE employee_id=#{employeeId}
+    </select>
+    <!-- 与业务写入使用同一事务；changed_fields_json 仅包含字段名，禁止写入字段值或密钥。 -->
+    <insert id="insertAuditEvent">
+        INSERT INTO admin_audit_event(actor_type,actor_id,action,target_type,target_id,changed_fields_json,trace_id,occurred_at)
+        VALUES(#{actorType},#{actorId},#{action},#{targetType},#{targetId},#{changedFields},#{traceId},UTC_TIMESTAMP(6))
+    </insert>
+    <sql id="auditWhere">
+        <where>
+            <if test="actorType != null">
+                AND actor_type=#{actorType}
+            </if>
+            <if test="actorId != null">
+                AND actor_id=#{actorId}
+            </if>
+            <if test="targetType != null">
+                AND target_type=#{targetType}
+            </if>
+            <if test="targetId != null">
+                AND target_id=#{targetId}
+            </if>
+            <if test="from != null">
+                AND occurred_at &gt;= #{from}
+            </if>
+            <if test="to != null">
+                AND occurred_at &lt;= #{to}
+            </if>
+        </where>
+    </sql>
+    <select id="listAuditEvents" resultType="map">
+        SELECT id, actor_type, actor_id, action, target_type, target_id, changed_fields_json, trace_id, occurred_at
+        FROM admin_audit_event
+        <include refid="auditWhere"/>
+        ORDER BY id
+        LIMIT #{size}
+        OFFSET #{offset}
+    </select>
+    <select id="countAuditEvents" resultType="long">
+        SELECT COUNT(*)
+        FROM admin_audit_event
+        <include refid="auditWhere"/>
+    </select>
+</mapper>
