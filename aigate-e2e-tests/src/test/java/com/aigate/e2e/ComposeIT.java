@@ -74,7 +74,7 @@ class ComposeIT {
             text = text.replace(value, "[REDACTED]");
         }
 
-        return text.replaceAll("(?:mgt_|bst_|svc_)[A-Za-z0-9_-]{20,}", "[REDACTED]");
+        return text.replaceAll("(?:mgt_|bst_|svc_|agk_|empk_)[A-Za-z0-9_-]{20,}", "[REDACTED]");
     }
 
     /**
@@ -196,6 +196,8 @@ class ComposeIT {
         env.put("AIGATE_MANAGEMENT_PEPPER",
             Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(secret())));
 
+        env.put("AIGATE_AGENT_PEPPER", Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(secret())));
+        env.put("AIGATE_EMPLOYEE_PEPPER", Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(secret())));
         env.put("AIGATE_BOOTSTRAP_MODE", "INIT");
         env.put("AIGATE_BOOTSTRAP_ALLOWED_CIDRS", "127.0.0.1/32,172.16.0.0/12,192.168.0.0/16");
         env.put("AIGATE_CI_PORT", Integer.toString(port));
@@ -243,11 +245,11 @@ class ComposeIT {
                 call("POST", "/api/v1/bootstrap/initialize", env.get("AIGATE_BOOTSTRAP_TOKEN"), body, "compose-restart")
                     .statusCode());
 
-            // 7、再次运行迁移任务，检查成功历史仍只有一条。
+            // 7、再次运行迁移任务，检查 V1、V2 成功历史仍各一条。
             compose("run", "--rm", "migrate");
             String history = compose("exec", "-T", "-e", "MYSQL_PWD", "mysql", "mysql", "-uroot", "-Nse",
                 "SELECT COUNT(*) FROM core_db.flyway_schema_history WHERE success=1");
-            assertEquals("1", history.strip());
+            assertEquals("2", history.strip());
             compose("logs", "--no-color");
         } finally {
             try {

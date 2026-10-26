@@ -5,6 +5,7 @@ import com.aigate.contracts.ApiError;
 import jakarta.servlet.DispatcherType;
 
 import java.util.UUID;
+import java.time.Clock;
 
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -26,6 +27,16 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfiguration {
+
+    /**
+     * 提供统一 UTC 时钟，测试可以替换为固定时钟校验时间边界。
+     *
+     * @return 系统 UTC 时钟
+     */
+    @Bean
+    Clock runtimeClock() {
+        return Clock.systemUTC();
+    }
 
     /**
      * 统一映射安全防火墙拒绝请求，输出带安全请求 ID 的参数错误。

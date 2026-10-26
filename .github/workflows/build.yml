@@ -1,4 +1,4 @@
-name: P1 build and integration
+name: Build and integration
 on: [push, pull_request]
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: p1-test-results
+          name: test-results
           path: |
             **/target/surefire-reports/*.xml
             **/target/failsafe-reports/*.xml

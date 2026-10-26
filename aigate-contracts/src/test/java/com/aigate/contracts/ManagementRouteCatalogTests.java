@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author AIGate
  */
-class P1RoutesTests {
+class ManagementRouteCatalogTests {
 
     /**
      * 把密钥形状的请求 ID 替换为安全标识，拒绝换行注入。
@@ -28,23 +28,23 @@ class P1RoutesTests {
     }
 
     /**
-     * 只有 P1 合同中的十七个方法组合可以进入代理。
+     * 只有 P1 合同中的三十二个方法组合可以进入代理。
      */
     @Test
-    @DisplayName("只有 P1 合同中的十七个方法组合可以进入代理。")
-    void onlyTheSeventeenContractMethodsCanBeForwarded() {
+    @DisplayName("只有 P1 合同中的三十二个方法组合可以进入代理。")
+    void onlyCurrentPhaseMethodsCanBeForwarded() {
         // 1、检查公开方法数量和合法路径。
-        assertEquals(17, P1Routes.ALL.stream().mapToInt(route -> route.methods().size()).sum());
-        assertEquals(0, P1Routes.rejection("PATCH", "/api/v1/teams/1"));
+        assertEquals(32, ManagementRouteCatalog.ALL.stream().mapToInt(route -> route.methods().size()).sum());
+        assertEquals(0, ManagementRouteCatalog.rejection("PATCH", "/api/v1/teams/1"));
 
         // 2、检查不支持的方法返回 405。
-        assertEquals(405, P1Routes.rejection("DELETE", "/api/v1/teams"));
-        assertEquals(405, P1Routes.rejection("HEAD", "/api/v1/teams"));
+        assertEquals(405, ManagementRouteCatalog.rejection("DELETE", "/api/v1/teams"));
+        assertEquals(405, ManagementRouteCatalog.rejection("HEAD", "/api/v1/teams"));
 
         // 3、检查内部、未来、额外路径段及编码路径返回 404。
-        assertEquals(404, P1Routes.rejection("GET", "/internal/v1/ping"));
-        assertEquals(404, P1Routes.rejection("POST", "/v1/chat/completions"));
-        assertEquals(404, P1Routes.rejection("GET", "/api/v1/teams/1/secret"));
-        assertEquals(404, P1Routes.rejection("GET", "/api/v1/teams/%2e%2e"));
+        assertEquals(404, ManagementRouteCatalog.rejection("GET", "/internal/v1/ping"));
+        assertEquals(404, ManagementRouteCatalog.rejection("POST", "/v1/chat/completions"));
+        assertEquals(404, ManagementRouteCatalog.rejection("GET", "/api/v1/teams/1/secret"));
+        assertEquals(404, ManagementRouteCatalog.rejection("GET", "/api/v1/teams/%2e%2e"));
     }
 }

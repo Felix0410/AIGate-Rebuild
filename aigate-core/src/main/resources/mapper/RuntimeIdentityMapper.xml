@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.felix.aigatecore.runtime.RuntimeIdentityMapper">
+    <!-- MyBatisX 无法推导 Map 动态键；仅对对应 OGNL 标签忽略名称解析，SQL 和其他检查继续启用。 -->
+    <select id="selectAgent" resultType="com.aigate.contracts.dto.AgentDTO">
+        SELECT id, application_code, display_name, owner_team_id, status, version, created_at, updated_at
+        FROM agent
+        WHERE id = #{id}
+    </select>
+
+    <select id="lockAgent" resultType="com.aigate.contracts.dto.AgentDTO">
+        SELECT id, application_code, display_name, owner_team_id, status, version, created_at, updated_at
+        FROM agent
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="lockEmployee" resultType="com.aigate.contracts.dto.EmployeeDTO">
+        SELECT id, employee_code, display_name, primary_team_id, status, version, created_at, updated_at
+        FROM employee
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <insert id="insertAgent" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent(application_code, display_name, owner_team_id, created_by_employee_id, status, version,
+            created_at, updated_at)
+        VALUES(#{applicationCode}, #{displayName}, #{ownerTeamId}, #{actorId}, 'ACTIVE', 0, #{now}, #{now})
+    </insert>
+
+    <update id="updateAgent">
+        UPDATE agent
+        SET display_name = #{displayName}, owner_team_id = #{ownerTeamId}, status = #{status},
+            version = version + 1, updated_at = #{now}
+        WHERE id = #{id}
+          AND version = #{expectedVersion}
+    </update>
+
+    <select id="listAgents" resultType="com.aigate.contracts.dto.AgentDTO">
+        SELECT id, application_code, display_name, owner_team_id, status, version, created_at, updated_at
+        FROM agent
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="ownerTeamId != null">
+                AND owner_team_id = #{ownerTeamId}
+            </if>
+        </where>
+        ORDER BY id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countAgents" resultType="long">
+        SELECT COUNT(*)
+        FROM agent
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="ownerTeamId != null">
+                AND owner_team_id = #{ownerTeamId}
+            </if>
+        </where>
+    </select>
+
+    <!-- 表名和 Owner 列只根据内部用途标志二选一，禁止从请求拼接 SQL 标识符。 -->
+    <select id="selectReceipt" resultType="com.felix.aigatecore.runtime.RuntimeKeyDO">
+        SELECT id,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_id</when>
+            <otherwise>employee_id</otherwise>
+        </choose>
+        AS ownerId, expires_at, valid_from, superseded_at, grace_expires_at, revoked_at,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">parent_key_id</when>
+            <otherwise>parent_credential_id</otherwise>
+        </choose>
+        AS parentId
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        WHERE issued_by_employee_id = #{actorId}
+          AND issue_idempotency_key = #{key}
+    </select>
+
+    <select id="lockKey" resultType="com.felix.aigatecore.runtime.RuntimeKeyDO">
+        SELECT id,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_id</when>
+            <otherwise>employee_id</otherwise>
+        </choose>
+        AS ownerId, expires_at, valid_from, superseded_at, grace_expires_at, revoked_at,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">parent_key_id</when>
+            <otherwise>parent_credential_id</otherwise>
+        </choose>
+        AS parentId
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="selectByDigest" resultType="com.felix.aigatecore.runtime.RuntimeKeyDO">
+        SELECT id,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_id</when>
+            <otherwise>employee_id</otherwise>
+        </choose>
+        AS ownerId, expires_at, valid_from, superseded_at, grace_expires_at, revoked_at,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">parent_key_id</when>
+            <otherwise>parent_credential_id</otherwise>
+        </choose>
+        AS parentId
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        WHERE secret_digest = #{digest}
+          AND pepper_key_id = #{pepperKeyId}
+    </select>
+
+    <!-- 上限统计与认证使用同一时间条件，宽限截止和自然到期端点都不包含。 -->
+    <select id="countEffectiveKeys" resultType="int">
+        SELECT COUNT(*) FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        WHERE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_id</when>
+            <otherwise>employee_id</otherwise>
+        </choose>
+        = #{ownerId}
+          AND valid_from &lt;= #{now}
+          AND expires_at &gt; #{now}
+          AND revoked_at IS NULL
+          AND (grace_expires_at IS NULL OR grace_expires_at &gt; #{now})
+    </select>
+
+    <insert id="insertKey" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        (
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_id</when>
+            <otherwise>employee_id</otherwise>
+        </choose>
+        , key_prefix, secret_digest, pepper_key_id, valid_from, expires_at, issued_by_employee_id,
+            issue_idempotency_key,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">parent_key_id</when>
+            <otherwise>parent_credential_id</otherwise>
+        </choose>
+        , created_at)
+        VALUES(#{ownerId}, #{keyPrefix}, #{digest}, #{pepperKeyId}, #{now}, #{expiresAt}, #{actorId}, #{key},
+            #{parentId}, #{now})
+    </insert>
+
+    <!-- 只保留首次替代时间，服务层保证宽限期不会被再次延长。 -->
+    <update id="supersedeKey">
+        UPDATE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        SET superseded_at = COALESCE(superseded_at, #{now}), grace_expires_at = #{grace}
+        WHERE id = #{id}
+          AND revoked_at IS NULL
+    </update>
+
+    <update id="revokeKey">
+        UPDATE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        SET revoked_at = #{now}
+        WHERE id = #{id}
+          AND revoked_at IS NULL
+    </update>
+
+    <select id="listKeys" resultType="com.aigate.contracts.dto.KeyMetadataDTO">
+        SELECT id, key_prefix, valid_from, expires_at, superseded_at, grace_expires_at, revoked_at, created_at
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        WHERE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_id</when>
+            <otherwise>employee_id</otherwise>
+        </choose>
+        = #{ownerId}
+        ORDER BY id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countKeys" resultType="long">
+        SELECT COUNT(*) FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_api_key</when>
+            <otherwise>employee_credential</otherwise>
+        </choose>
+        WHERE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="agentKey">agent_id</when>
+            <otherwise>employee_id</otherwise>
+        </choose>
+        = #{ownerId}
+    </select>
+
+    <select id="selectPermission" resultType="com.aigate.contracts.dto.AgentEmployeePermissionDTO">
+        SELECT employee_id, agent_id, status, version, granted_at, revoked_at
+        FROM employee_agent_permission
+        WHERE employee_id = #{employeeId}
+          AND agent_id = #{agentId}
+    </select>
+
+    <!-- 恢复授权只更新原唯一 Pair，不能另插一行绕过版本历史。 -->
+    <insert id="grantPermission">
+        INSERT INTO employee_agent_permission(employee_id, agent_id, status, version, granted_by_employee_id,
+            granted_at, created_at, updated_at)
+        VALUES(#{employeeId}, #{agentId}, 'GRANTED', 0, #{actorId}, #{now}, #{now}, #{now})
+        ON DUPLICATE KEY UPDATE status = 'GRANTED', version = version + 1, granted_by_employee_id = #{actorId},
+            granted_at = #{now}, revoked_by_employee_id = NULL, revoked_at = NULL, updated_at = #{now}
+    </insert>
+
+    <update id="revokePermission">
+        UPDATE employee_agent_permission
+        SET status = 'REVOKED', version = version + 1, revoked_by_employee_id = #{actorId}, revoked_at = #{now},
+            updated_at = #{now}
+        WHERE employee_id = #{employeeId}
+          AND agent_id = #{agentId}
+          AND status = 'GRANTED'
+    </update>
+
+    <select id="listPermissions" resultType="com.aigate.contracts.dto.AgentEmployeePermissionDTO">
+        SELECT employee_id, agent_id, status, version, granted_at, revoked_at
+        FROM employee_agent_permission
+        WHERE agent_id = #{agentId}
+        <!--suppress XmlUnresolvedReference -->
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY employee_id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPermissions" resultType="long">
+        SELECT COUNT(*)
+        FROM employee_agent_permission
+        WHERE agent_id = #{agentId}
+        <!--suppress XmlUnresolvedReference -->
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+    </select>
+
+</mapper>

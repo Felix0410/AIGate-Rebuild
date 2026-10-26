@@ -9,12 +9,12 @@ import java.util.regex.Pattern;
  *
  * @author AIGate
  */
-public final class P1Routes {
+public final class ManagementRouteCatalog {
 
     /**
      * 工具类不允许实例化。
      */
-    private P1Routes() {
+    private ManagementRouteCatalog() {
     }
 
     /**
@@ -51,7 +51,17 @@ public final class P1Routes {
         new Route("/api/v1/employees/{employeeId}/management-credentials", Set.of("GET", "POST")),
         new Route("/api/v1/employees/{employeeId}/management-credentials/{credentialId}", Set.of("DELETE")),
         new Route("/api/v1/me/profile", Set.of("GET")),
-        new Route("/api/v1/admin/audit-events", Set.of("GET")));
+        new Route("/api/v1/admin/audit-events", Set.of("GET")),
+        new Route("/api/v1/agents", Set.of("GET", "POST")),
+        new Route("/api/v1/agents/{agentId}", Set.of("GET", "PATCH")),
+        new Route("/api/v1/agents/{agentId}/keys", Set.of("GET", "POST")),
+        new Route("/api/v1/agents/{agentId}/keys/{keyId}", Set.of("DELETE")),
+        new Route("/api/v1/agents/{agentId}/keys/{keyId}/rotate", Set.of("POST")),
+        new Route("/api/v1/employees/{employeeId}/runtime-credentials", Set.of("GET", "POST")),
+        new Route("/api/v1/employees/{employeeId}/runtime-credentials/{credentialId}", Set.of("DELETE")),
+        new Route("/api/v1/employees/{employeeId}/runtime-credentials/{credentialId}/rotate", Set.of("POST")),
+        new Route("/api/v1/agents/{agentId}/employees", Set.of("GET")),
+        new Route("/api/v1/agents/{agentId}/employees/{employeeId}", Set.of("PUT", "DELETE")));
 
     /**
      * 识别编码路径、路径穿越和分号等可能绕过白名单的路径形式。

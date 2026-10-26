@@ -233,6 +233,17 @@ public class SecuritySettings {
     }
 
     /**
+     * 检查运行凭证配置是否复用了管理 Pepper，包括仍保留的历史配置。
+     *
+     * @param material 候选密钥材料
+     * @return 与管理用途的任一材料相同时为 true
+     */
+    public boolean usesPepper(byte[] material) {
+        return Arrays.equals(current.bytes(), material)
+            || (previous != null && Arrays.equals(previous.bytes(), material));
+    }
+
+    /**
      * 联合校验运维模式、独立 Bootstrap 凭证和真实来源网段。
      *
      * @param mode 当前运维动作要求的模式

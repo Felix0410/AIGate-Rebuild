@@ -1,5 +1,9 @@
 package com.felix.aigatecore.web;
 
+import static com.felix.aigatecore.web.ManagementRequestParameters.context;
+import static com.felix.aigatecore.web.ManagementRequestParameters.query;
+import static com.felix.aigatecore.web.ManagementRequestParameters.requireNoBody;
+
 import com.aigate.contracts.dto.AuditMetadataDTO;
 import com.aigate.contracts.dto.BootstrapInitializedDTO;
 import com.aigate.contracts.dto.EmployeeDTO;
@@ -14,8 +18,6 @@ import com.felix.aigatecore.identity.RequestContext;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
@@ -45,61 +47,6 @@ public class IdentityController {
      */
     public IdentityController(IdentityService service) {
         this.service = service;
-    }
-
-    /**
-     * 读取不带查询参数的管理请求上下文。
-     *
-     * @param request 当前 HTTP 请求
-     * @return 已提取单个凭证头及受信来源的请求上下文
-     */
-    private RequestContext context(HttpServletRequest request) {
-        // 拒绝非列表接口的查询参数，再读取认证请求头。
-        if (!request.getParameterMap().isEmpty()) {
-            throw ApiException.invalid();
-        }
-
-        return RequestContext.from(request);
-    }
-
-    /**
-     * 读取单值查询参数，拒绝业务正文和重复的同名参数。
-     *
-     * @param request 当前 HTTP 请求
-     * @return 经过约束的单值参数集合
-     */
-    private Map<String, String> query(HttpServletRequest request) {
-        // 1、拒绝请求正文，读取查询参数。
-        noBody(request);
-
-        Map<String, String> query = new HashMap<>();
-
-        // 2、同名查询参数只能出现一次，不默认选取其中一个值。
-        request.getParameterMap().forEach((key, values) -> {
-            if (values.length != 1) {
-                throw ApiException.invalid();
-            }
-
-            query.put(key, values[0]);
-        });
-
-        return query;
-    }
-
-    /**
-     * 确保无正文接口不携带可被误解释的业务请求体。
-     *
-     * @param request 当前 HTTP 请求
-     */
-    private void noBody(HttpServletRequest request) {
-        try {
-            // 实际读取一字节检查正文，同时覆盖没有 Content-Length 的分块请求。
-            if (request.getInputStream().read() != -1) {
-                throw ApiException.invalid();
-            }
-        } catch (IOException failure) {
-            throw ApiException.invalid();
-        }
     }
 
     /**
@@ -169,7 +116,7 @@ public class IdentityController {
     @GetMapping("/api/v1/teams/{teamId}")
     TeamDTO team(@PathVariable String teamId, HttpServletRequest request) {
         // 此类接口不接收正文，先拒绝多余输入，再读取路径或查询参数。
-        noBody(request);
+        requireNoBody(request);
 
         return service.getTeam(context(request), ValidatedBody.pathId(teamId, false));
     }
@@ -224,7 +171,7 @@ public class IdentityController {
     @GetMapping("/api/v1/employees/{employeeId}")
     EmployeeDTO employee(@PathVariable String employeeId, HttpServletRequest request) {
         // 此类接口不接收正文，先拒绝多余输入，再读取路径或查询参数。
-        noBody(request);
+        requireNoBody(request);
 
         return service.getEmployee(context(request), ValidatedBody.pathId(employeeId, false));
     }
@@ -258,7 +205,7 @@ public class IdentityController {
     ResponseEntity<Void> grant(@PathVariable String employeeId, @PathVariable String roleCode,
         @PathVariable String scopeType, @PathVariable String scopeId, HttpServletRequest request) {
         // 1、拒绝正文，解析员工、角色及作用域参数。
-        noBody(request);
+        requireNoBody(request);
 
         boolean created = service.grantRole(context(request), ValidatedBody.pathId(employeeId, false), roleCode,
             scopeType, ValidatedBody.pathId(scopeId, true));
@@ -281,7 +228,7 @@ public class IdentityController {
     ResponseEntity<Void> revokeRole(@PathVariable String employeeId, @PathVariable String roleCode,
         @PathVariable String scopeType, @PathVariable String scopeId, HttpServletRequest request) {
         // 拒绝正文，撤销指定角色关系，成功后返回 204。
-        noBody(request);
+        requireNoBody(request);
 
         service.revokeRole(context(request), ValidatedBody.pathId(employeeId, false), roleCode, scopeType,
             ValidatedBody.pathId(scopeId, true));
@@ -332,7 +279,7 @@ public class IdentityController {
     ResponseEntity<Void> revokeCredential(@PathVariable String employeeId, @PathVariable String credentialId,
         HttpServletRequest request) {
         // 拒绝正文，吊销指定员工的凭证，成功后返回 204。
-        noBody(request);
+        requireNoBody(request);
 
         service.revokeCredential(context(request), ValidatedBody.pathId(employeeId, false),
             ValidatedBody.pathId(credentialId, false));
@@ -349,7 +296,7 @@ public class IdentityController {
     @GetMapping("/api/v1/me/profile")
     ManagementProfileDTO profile(HttpServletRequest request) {
         // 拒绝正文，查询当前员工和角色。
-        noBody(request);
+        requireNoBody(request);
 
         return service.getCurrentProfile(context(request));
     }
@@ -375,7 +322,7 @@ public class IdentityController {
     @GetMapping("/internal/v1/ping")
     Map<String, String> ping(HttpServletRequest request) {
         // 拒绝正文及查询参数，仅返回 Core 的最小运行状态。
-        noBody(request);
+        requireNoBody(request);
         if (!request.getParameterMap().isEmpty()) {
             throw ApiException.invalid();
         }

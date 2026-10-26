@@ -162,6 +162,17 @@ public class IdentityService {
     }
 
     /**
+     * 为其他管理模块检查当前全局管理员，复用管理凭证、员工和团队检查。
+     *
+     * @param requestContext 当前管理请求
+     * @return 当前管理员员工主键
+     */
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
+    public long requireGlobalAdministrator(RequestContext requestContext) {
+        return requireAdministrator(requestContext).employee().id();
+    }
+
+    /**
      * 读取必需的团队记录，不存在时转换为业务 404。
      *
      * @param id 资源的数据库主键，必须符合当前接口的正整数约束

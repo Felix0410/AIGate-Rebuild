@@ -2,7 +2,7 @@ package com.felix.aigategateway.security;
 
 import com.aigate.contracts.ApiContractConstants;
 import com.aigate.contracts.ApiError;
-import com.aigate.contracts.P1Routes;
+import com.aigate.contracts.ManagementRouteCatalog;
 import com.aigate.contracts.RequestIds;
 
 import jakarta.servlet.FilterChain;
@@ -53,8 +53,8 @@ public class GatewayBoundaryFilter extends OncePerRequestFilter {
         response.setHeader("X-Request-Id", id);
         response.setHeader("Cache-Control", "no-store");
 
-        // 2、使用 P1Routes.rejection 检查路径和方法。
-        int status = P1Routes.rejection(request.getMethod(), request.getRequestURI());
+        // 2、使用 ManagementRouteCatalog.rejection 检查路径和方法。
+        int status = ManagementRouteCatalog.rejection(request.getMethod(), request.getRequestURI());
 
         // 3、已知正文超过 64 KiB 时返回 400，分块正文由 Core 继续检查。
         if (request.getContentLengthLong() > ApiContractConstants.MAX_JSON_BODY_BYTES) {

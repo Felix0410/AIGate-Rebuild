@@ -50,7 +50,10 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DuplicateKeyException.class)
     ResponseEntity<ApiError> duplicate(DuplicateKeyException failure, HttpServletRequest request) {
         // 将唯一约束冲突转为 409，不返回数据库索引名或 SQL。
-        return response(409, "DUPLICATE_RESOURCE", "Resource already exists", request);
+        String code = request.getMethod().equals("POST") && request.getRequestURI().equals("/api/v1/agents")
+            ? "DUPLICATE_APPLICATION_CODE"
+            : "DUPLICATE_RESOURCE";
+        return response(409, code, "Resource already exists", request);
     }
 
     /**

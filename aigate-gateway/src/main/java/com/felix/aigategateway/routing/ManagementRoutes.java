@@ -5,7 +5,7 @@ import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouter
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 
 import com.aigate.contracts.ApiError;
-import com.aigate.contracts.P1Routes;
+import com.aigate.contracts.ManagementRouteCatalog;
 
 import java.net.SocketTimeoutException;
 import java.net.URI;
@@ -60,8 +60,8 @@ public class ManagementRoutes {
         }
 
         // 3、按公开路径和 HTTP 方法逐项注册路由。
-        var routes = route("p1-management");
-        for (var entry : P1Routes.ALL) {
+        var routes = route("management");
+        for (var entry : ManagementRouteCatalog.ALL) {
             for (String method : entry.methods()) {
                 routes.route(
                     RequestPredicates.method(HttpMethod.valueOf(method)).and(RequestPredicates.path(entry.path())),

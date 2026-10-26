@@ -1,6 +1,7 @@
 package com.felix.aigatecore;
 
 import com.felix.aigatecore.identity.IdentityMapper;
+import com.felix.aigatecore.runtime.RuntimeIdentityMapper;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -25,6 +26,9 @@ class AigateCoreApplicationTests {
     @MockitoBean
     IdentityMapper identityMapper;
 
+    @MockitoBean
+    RuntimeIdentityMapper runtimeIdentityMapper;
+
     /**
      * 为装配测试生成临时安全配置，禁止复用开发环境真实密钥。
      *
@@ -41,6 +45,13 @@ class AigateCoreApplicationTests {
         registry.add("AIGATE_SERVICE_TOKEN",
             () -> "svc_" + Base64.getUrlEncoder().withoutPadding().encodeToString(service));
         registry.add("AIGATE_MANAGEMENT_PEPPER", () -> Base64.getEncoder().encodeToString(pepper));
+        for (String purpose : java.util.List.of("AGENT", "EMPLOYEE")) {
+            byte[] runtime = new byte[32];
+            random.nextBytes(runtime);
+            registry.add("AIGATE_" + purpose + "_PEPPER_KEY_ID",
+                () -> purpose.toLowerCase(java.util.Locale.ROOT) + "-v1");
+            registry.add("AIGATE_" + purpose + "_PEPPER", () -> Base64.getEncoder().encodeToString(runtime));
+        }
     }
 
     /**

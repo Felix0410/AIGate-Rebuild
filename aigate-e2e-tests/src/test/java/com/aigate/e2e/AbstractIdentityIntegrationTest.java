@@ -69,6 +69,10 @@ abstract class AbstractIdentityIntegrationTest {
 
     protected final String pepper = Base64.getEncoder().encodeToString(randomBytes());
 
+    protected final String agentPepper = Base64.getEncoder().encodeToString(randomBytes());
+
+    protected final String employeePepper = Base64.getEncoder().encodeToString(randomBytes());
+
     protected MySQLContainer mysql;
 
     protected Process core;
@@ -154,7 +158,7 @@ abstract class AbstractIdentityIntegrationTest {
             value = value.replace(secret, "[REDACTED]");
         }
 
-        return value.replaceAll("(?:mgt_|bst_|svc_)[A-Za-z0-9_-]{20,}", "[REDACTED]");
+        return value.replaceAll("(?:mgt_|bst_|svc_|agk_|empk_)[A-Za-z0-9_-]{20,}", "[REDACTED]");
     }
 
     /**
@@ -213,7 +217,8 @@ abstract class AbstractIdentityIntegrationTest {
         // 1、检查 JDK 版本，创建测试输出目录并登记待脱敏的密钥。
         assertEquals(21, Runtime.version().feature(), "Use JDK21 to run the P1 contract");
         Files.createDirectories(outputDirectory);
-        secretValues.addAll(List.of(rootPassword, appPassword, migratorPassword, serviceToken, bootstrapToken, pepper));
+        secretValues.addAll(List.of(rootPassword, appPassword, migratorPassword, serviceToken, bootstrapToken, pepper,
+            agentPepper, employeePepper));
 
         // 2、启动独立 MySQL 容器，创建只读写数据的应用账号和可执行 DDL 的迁移账号。
         mysql = new MySQLContainer(DockerImageName.parse(MYSQL_IMAGE).asCompatibleSubstituteFor("mysql"))
@@ -264,7 +269,8 @@ abstract class AbstractIdentityIntegrationTest {
         try (Connection db = db();
             var statement = db.createStatement()) {
             statement.execute("SET FOREIGN_KEY_CHECKS=0");
-            for (String table : List.of("admin_audit_event", "management_credential", "role_assignment", "employee",
+            for (String table : List.of("admin_audit_event", "management_credential", "role_assignment",
+                "employee_agent_permission", "agent_api_key", "employee_credential", "agent", "employee",
                 "team", "bootstrap_control")) {
                 statement.execute("TRUNCATE TABLE " + table);
             }
@@ -298,6 +304,10 @@ abstract class AbstractIdentityIntegrationTest {
 
         environment.put("AIGATE_SERVICE_TOKEN", serviceToken);
         environment.put("AIGATE_MANAGEMENT_PEPPER", pepper);
+        environment.put("AIGATE_AGENT_PEPPER_KEY_ID", "agent-v1");
+        environment.put("AIGATE_AGENT_PEPPER", agentPepper);
+        environment.put("AIGATE_EMPLOYEE_PEPPER_KEY_ID", "employee-v1");
+        environment.put("AIGATE_EMPLOYEE_PEPPER", employeePepper);
         environment.put("AIGATE_BOOTSTRAP_MODE", mode);
         environment.put("AIGATE_BOOTSTRAP_TOKEN", bootstrapToken);
         environment.put("AIGATE_BOOTSTRAP_ALLOWED_CIDRS", "127.0.0.1/32");
