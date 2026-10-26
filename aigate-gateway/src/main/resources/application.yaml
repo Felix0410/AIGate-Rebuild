@@ -1,6 +1,8 @@
 spring:
   application:
     name: aigate-gateway
+
+  # 设置连接和读取超时，转发异常交给 ManagementRoutes 转成错误响应。
   http:
     clients:
       connect-timeout: 2s
@@ -9,10 +11,13 @@ spring:
     gateway:
       server:
         webmvc:
+
+          # 关闭自动转发来源头，由路由代码删除客户端旧值并写入真实来源。
           forwarded-request-headers-filter:
             enabled: false
           x-forwarded-request-headers-filter:
             enabled: false
+
 server:
   address: ${AIGATE_BIND_ADDRESS:127.0.0.1}
   port: ${AIGATE_GATEWAY_PORT:8080}

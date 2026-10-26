@@ -1,8 +1,10 @@
 package com.felix.aigatecore;
 
 import com.felix.aigatecore.identity.IdentityMapper;
+
 import java.security.SecureRandom;
 import java.util.Base64;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,6 +32,7 @@ class AigateCoreApplicationTests {
      */
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
+        // 为装配测试生成独立随机凭证，不使用开发环境密钥。
         var random = new SecureRandom();
         byte[] service = new byte[32];
         byte[] pepper = new byte[32];
@@ -46,5 +49,6 @@ class AigateCoreApplicationTests {
     @Test
     @DisplayName("验证应用组件能够装配；本用例不代替真实数据库或网络验收。")
     void contextLoads() {
+        // Spring 上下文能启动并进入此方法，即表示装配成功；真实调用由集成测试检查。
     }
 }

@@ -17,6 +17,7 @@ public class AigateCoreApplication {
      * @param args 应用启动参数，不应包含密钥明文
      */
     public static void main(String[] args) {
+        // 启动 Core，数据库和安全配置由 Spring Boot 注入。
         SpringApplication.run(AigateCoreApplication.class, args);
     }
 }

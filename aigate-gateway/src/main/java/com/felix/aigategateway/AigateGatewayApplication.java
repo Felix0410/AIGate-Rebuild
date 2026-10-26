@@ -17,6 +17,7 @@ public class AigateGatewayApplication {
      * @param args 应用启动参数，不应包含密钥明文
      */
     public static void main(String[] args) {
+        // 启动 Gateway，目标地址和服务凭证从运行配置读取。
         SpringApplication.run(AigateGatewayApplication.class, args);
     }
 }

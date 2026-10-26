@@ -9,12 +9,12 @@ package com.aigate.contracts;
 public record ApiError(ErrorDetail error) {
 
     /**
-     * 错误响应的公开明细；重试标志不代表客户端可以自动重放已可能提交的写操作。
+     * 错误详情，供客户端识别错误并关联请求。
      *
-     * @param code 稳定错误码或员工编码
-     * @param message 允许对外公开的安全消息
-     * @param requestId 已规范化的诊断请求 ID
-     * @param retryable 错误是否允许受控重试；不授予自动重放写操作的权限
+     * @param code 公开错误码
+     * @param message 可对外返回的错误消息
+     * @param requestId 本次请求 ID
+     * @param retryable 是否允许按业务规则重试，不代表写请求可以自动重放
      * @author AIGate
      */
     public record ErrorDetail(String code, String message, String requestId, boolean retryable) {
@@ -30,6 +30,7 @@ public record ApiError(ErrorDetail error) {
      * @return 不含底层异常和敏感信息的统一错误
      */
     public static ApiError of(String code, String message, String requestId, boolean retryable) {
+        // 将错误码、公开消息、请求 ID 和重试标志放入统一 error 结构。
         return new ApiError(new ErrorDetail(code, message, requestId, retryable));
     }
 }

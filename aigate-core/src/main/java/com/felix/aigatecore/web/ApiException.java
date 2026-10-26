@@ -17,13 +17,14 @@ public final class ApiException extends RuntimeException {
     private final String code;
 
     /**
-     * 创建ApiException，显式注入当前组件依赖或不可变状态。
+     * 创建业务异常，保存 HTTP 状态、错误码和公开消息。
      *
-     * @param status 当前合同允许的状态值
+     * @param status 当前接口允许的状态值
      * @param code 稳定错误码或员工编码
      * @param message 允许对外公开的安全消息
      */
     public ApiException(int status, String code, String message) {
+        // 保存可对外返回的业务消息，不能传入 SQL、密钥或底层异常原文。
         super(message);
         this.status = status;
         this.code = code;
@@ -32,7 +33,7 @@ public final class ApiException extends RuntimeException {
     /**
      * 读取此业务异常对应的 HTTP 状态码。
      *
-     * @return 业务异常对应的 HTTP 状态码
+     * @return 该业务异常对应的 HTTP 状态码
      */
     public int status() {
         return status;
@@ -41,7 +42,7 @@ public final class ApiException extends RuntimeException {
     /**
      * 读取对外稳定的业务错误编码。
      *
-     * @return 对外稳定的错误编码
+     * @return 业务错误码
      */
     public String code() {
         return code;
@@ -62,6 +63,7 @@ public final class ApiException extends RuntimeException {
      * @return 不含敏感信息的业务异常
      */
     public static ApiException unauthenticated() {
+        // 统一返回 401，不区分凭证不存在、已过期或已吊销。
         return new ApiException(401, "UNAUTHENTICATED", "Invalid credentials");
     }
 

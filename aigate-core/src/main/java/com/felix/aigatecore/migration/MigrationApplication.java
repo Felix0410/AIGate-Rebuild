@@ -21,6 +21,7 @@ public final class MigrationApplication {
      * @param args 应用启动参数，不应包含密钥明文
      */
     public static void main(String[] args) {
+        // 使用独立迁移账号执行 Flyway，先校验历史脚本，并禁止 clean 清库。
         Flyway.configure()
             .dataSource(required("AIGATE_DB_URL"), required("AIGATE_FLYWAY_USERNAME"),
                 required("AIGATE_FLYWAY_PASSWORD"))
@@ -31,13 +32,15 @@ public final class MigrationApplication {
      * 读取迁移任务必需配置，只在错误中报告缺少的变量名。
      *
      * @param name 必需的迁移环境变量名称
-     * @return 当前操作生成或校验后的文本
+     * @return 该环境变量的非空配置值
      */
     private static String required(String name) {
+        // 读取必需的环境变量，缺少时只在错误中提示变量名。
         String value = System.getenv(name);
         if (value == null || value.isBlank()) {
             throw new IllegalStateException("Missing migration setting: " + name);
         }
+
         return value;
     }
 }

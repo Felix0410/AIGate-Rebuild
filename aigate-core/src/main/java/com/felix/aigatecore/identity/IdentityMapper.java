@@ -4,13 +4,15 @@ import com.aigate.contracts.dto.EmployeeDTO;
 import com.aigate.contracts.dto.ManagementCredentialMetadataDTO;
 import com.aigate.contracts.dto.RoleAssignmentDTO;
 import com.aigate.contracts.dto.TeamDTO;
+
 import java.util.List;
 import java.util.Map;
+
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 身份模块的数据访问接口。SQL 必须使用参数绑定；列表和 COUNT 必须应用相同的权限过滤。
+ * 身份管理的数据访问接口。SQL 使用参数绑定，列表和 COUNT 使用相同的查询范围。
  *
  * @author AIGate
  */
@@ -20,9 +22,10 @@ public interface IdentityMapper {
     /**
      * 锁定固定初始化单例行；调用方必须已进入管理写事务。
      *
-     * @return 按固定字段构造的内部数据参数或查询结果
+     * @return 单行初始化状态；单例行缺失时为 null
      */
-    Map<String, Object> lockBootstrapControl();
+    // 写入前先锁定控制行，各个管理接口按相同顺序获取锁。
+    BootstrapControlDO lockBootstrapControl();
 
     /**
      * 仅在尚未初始化时写入首次管理员与完成时间。
@@ -38,6 +41,7 @@ public interface IdentityMapper {
      * @param id 资源的数据库主键，必须符合当前接口的正整数约束
      * @return 匹配的持久化记录；不存在时为 null
      */
+    // 只读取团队响应所需字段，访问权限由服务层及列表 SQL 检查。
     TeamDTO selectTeamById(long id);
 
     /**
@@ -60,7 +64,7 @@ public interface IdentityMapper {
      * 读取未撤销的角色关系，按数据库主键稳定排序。
      *
      * @param employeeId 目标员工主键
-     * @return 当前查询范围内的有序结果
+     * @return 应用当前过滤条件后的查询结果
      */
     List<RoleAssignmentDTO> listRoleAssignments(long employeeId);
 
@@ -68,7 +72,7 @@ public interface IdentityMapper {
      * 读取当前 Team Manager 被授予且仍 ACTIVE 的团队。
      *
      * @param employeeId 目标员工主键
-     * @return 当前查询范围内的有序结果
+     * @return 应用当前过滤条件后的查询结果
      */
     List<Long> listVisibleTeamIds(long employeeId);
 
@@ -90,7 +94,7 @@ public interface IdentityMapper {
     /**
      * 插入团队并回填生成主键；初始状态和版本由服务端固定。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
     int insertTeam(Map<String, Object> values);
@@ -98,7 +102,7 @@ public interface IdentityMapper {
     /**
      * 插入员工并回填生成主键。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
     int insertEmployee(Map<String, Object> values);
@@ -106,7 +110,7 @@ public interface IdentityMapper {
     /**
      * 使用 expectedVersion 更新团队；仍有 ACTIVE 员工时禁止禁用。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
     int updateTeam(Map<String, Object> values);
@@ -114,7 +118,7 @@ public interface IdentityMapper {
     /**
      * 按期望版本更新员工资料及状态，禁用前保护最后有效管理员。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
     int updateEmployee(Map<String, Object> values);
@@ -123,7 +127,7 @@ public interface IdentityMapper {
      * 按当前权限范围查询团队及其过滤后的总数。
      *
      * @param query 已应用白名单和权限范围的查询参数
-     * @return 当前查询范围内的有序结果
+     * @return 应用当前过滤条件后的查询结果
      */
     List<TeamDTO> listTeams(Map<String, Object> query);
 
@@ -139,7 +143,7 @@ public interface IdentityMapper {
      * 按当前权限范围查询员工及其过滤后的总数。
      *
      * @param query 已应用白名单和权限范围的查询参数
-     * @return 当前查询范围内的有序结果
+     * @return 应用当前过滤条件后的查询结果
      */
     List<EmployeeDTO> listEmployees(Map<String, Object> query);
 
@@ -152,17 +156,17 @@ public interface IdentityMapper {
     long countEmployees(Map<String, Object> query);
 
     /**
-     * 幂等授予角色；只有真实新增或恢复关系时才追加审计。
+     * 新增或恢复角色关系；调用方负责判断重复授权并在同一事务中追加审计。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
     int grantRole(Map<String, Object> values);
 
     /**
-     * 幂等撤销角色；禁止撤销最后有效全局管理员。
+     * 将有效角色关系标记为已撤销；最后管理员保护由持锁的服务层完成。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
     int revokeRole(Map<String, Object> values);
@@ -170,7 +174,7 @@ public interface IdentityMapper {
     /**
      * 统计指定员工、角色和作用域的有效授权关系。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 满足当前过滤条件的记录数
      */
     int countActiveRoleAssignments(Map<String, Object> values);
@@ -182,6 +186,7 @@ public interface IdentityMapper {
      * @param pepperKeyId 内部 HMAC 密钥版本标识，不包含密钥材料
      * @return 匹配的持久化记录；不存在时为 null
      */
+    // 用摘要匹配凭证，不查询或返回密钥明文；同时保存签发者和幂等键。
     ManagementCredentialDO selectCredentialByDigest(@Param("digest") byte[] digest,
         @Param("pepperKeyId") String pepperKeyId);
 
@@ -190,7 +195,7 @@ public interface IdentityMapper {
      *
      * @param type 受信操作者类型或受控字段类型
      * @param actorId 签发者或审计操作者主键；BOOTSTRAP 固定为 0
-     * @param key 字段名或当前操作的受控幂等标识；凭证明文只允许在首次签发响应使用
+     * @param key 当前字段名或操作幂等键，按方法用途传入
      * @return 匹配的持久化记录；不存在时为 null
      */
     ManagementCredentialDO selectIssuedCredential(@Param("actorType") String type, @Param("actorId") long actorId,
@@ -207,7 +212,7 @@ public interface IdentityMapper {
     /**
      * 保存管理凭证摘要及幂等事实，禁止将明文密钥加入参数。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
     int insertCredential(Map<String, Object> values);
@@ -221,10 +226,10 @@ public interface IdentityMapper {
     int revokeCredential(long id);
 
     /**
-     * 仅向管理员分页返回凭证元数据，不包含明文或摘要。
+     * 分页查询凭证元数据，不包含明文或摘要；调用方必须先完成管理员权限校验。
      *
      * @param query 已应用白名单和权限范围的查询参数
-     * @return 当前查询范围内的有序结果
+     * @return 应用当前过滤条件后的查询结果
      */
     List<ManagementCredentialMetadataDTO> listCredentialMetadata(Map<String, Object> query);
 
@@ -239,16 +244,17 @@ public interface IdentityMapper {
     /**
      * 追加当前事务的安全审计，变更 JSON 只能保存字段名数组。
      *
-     * @param values 固定白名单字段组成的 SQL 写入参数，不得包含明文密钥
+     * @param values SQL 写入参数，不能包含密钥明文
      * @return 实际受影响的数据库行数
      */
+    // 审计与业务写入使用同一事务，查询列表和总数时使用相同条件。
     int insertAuditEvent(Map<String, Object> values);
 
     /**
      * 按受限查询条件返回审计元数据，时间区间最多九十天。
      *
      * @param query 已应用白名单和权限范围的查询参数
-     * @return 当前查询范围内的有序结果
+     * @return 应用当前过滤条件后的查询结果
      */
     List<Map<String, Object>> listAuditEvents(Map<String, Object> query);
 

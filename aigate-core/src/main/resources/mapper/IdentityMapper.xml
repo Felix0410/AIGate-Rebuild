@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper  PUBLIC '-//mybatis.org//DTD Mapper 3.0//EN'  'https://mybatis.org/dtd/mybatis-3-mapper.dtd'>
 <mapper namespace="com.felix.aigatecore.identity.IdentityMapper">
-    <!-- 所有管理写操作先锁定已有单例行，再在同一事务内复查授权，不能依赖不存在记录的间隙锁。 -->
-    <select id="lockBootstrapControl" resultType="map">
+    <!-- 写入前锁定 id=1 的控制行，再检查权限，锁持续到事务结束。 -->
+    <select id="lockBootstrapControl" resultType="com.felix.aigatecore.identity.BootstrapControlDO">
         SELECT id, initialized_at AS initializedAt
         FROM bootstrap_control
         WHERE id=1
         FOR UPDATE
     </select>
+
     <update id="initializeBootstrapControl">
         UPDATE bootstrap_control
         SET initialized_at=UTC_TIMESTAMP(6),
@@ -17,21 +18,25 @@
         WHERE id=1
             AND initialized_at IS NULL
     </update>
+
     <select id="selectTeamById" resultType="com.aigate.contracts.dto.TeamDTO">
         SELECT id, name, status, version, created_at, updated_at
         FROM team
         WHERE id=#{id}
     </select>
+
     <select id="selectEmployeeById" resultType="com.aigate.contracts.dto.EmployeeDTO">
         SELECT id, employee_code, display_name, primary_team_id, status, version, created_at, updated_at
         FROM employee
         WHERE id=#{id}
     </select>
+
     <select id="selectEmployeeByCode" resultType="com.aigate.contracts.dto.EmployeeDTO">
         SELECT id, employee_code, display_name, primary_team_id, status, version, created_at, updated_at
         FROM employee
         WHERE employee_code=#{code}
     </select>
+
     <select id="listRoleAssignments" resultType="com.aigate.contracts.dto.RoleAssignmentDTO">
         SELECT role_code,scope_type,scope_id
         FROM role_assignment
@@ -39,6 +44,7 @@
             AND revoked_at IS NULL
         ORDER BY id
     </select>
+
     <select id="listVisibleTeamIds" resultType="long">
         SELECT r.scope_id
         FROM role_assignment r
@@ -50,12 +56,14 @@
             AND r.revoked_at IS NULL
         ORDER BY r.scope_id
     </select>
+
     <select id="countActiveEmployeesByTeamId" resultType="int">
         SELECT COUNT(*)
         FROM employee
         WHERE primary_team_id=#{teamId}
             AND status='ACTIVE'
     </select>
+
     <select id="countActiveGlobalAdministrators" resultType="int">
         SELECT COUNT(DISTINCT e.id)
         FROM employee e
@@ -68,20 +76,26 @@
             AND r.scope_id=0
             AND r.revoked_at IS NULL
     </select>
+
     <insert id="insertTeam" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO team(name,status,version,created_at,updated_at)
         VALUES(#{name},'ACTIVE',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))
     </insert>
+
     <insert id="insertEmployee" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO employee(employee_code,display_name,primary_team_id,status,version,created_at,updated_at)
         VALUES(#{employeeCode},#{displayName},#{primaryTeamId},'ACTIVE',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))
     </insert>
+
+    <!-- 按 ID 和期望版本更新团队，版本加 1；未更新到记录时，服务层返回版本冲突。 -->
     <update id="updateTeam">
         UPDATE team
         SET name=#{name},status=#{status},version=version+1,updated_at=UTC_TIMESTAMP(6)
         WHERE id=#{id}
             AND version=#{expectedVersion}
     </update>
+
+    <!-- 服务层已合并缺省字段；这里按 ID 和版本更新，避免覆盖其他请求的修改。 -->
     <update id="updateEmployee">
         UPDATE employee
         SET display_name=#{displayName},
@@ -92,18 +106,27 @@
         WHERE id=#{id}
             AND version=#{expectedVersion}
     </update>
-    <!-- 分页列表与 COUNT 复用同一权限过滤；没有可见团队时必须返回空集。 -->
+
+    <!-- 团队列表和 COUNT 共用这些条件；非管理员只能查询可管理且 ACTIVE 的团队。 -->
+    <!--
+        MyBatisX 1.7.7 无法识别共享片段的参数，下方仅忽略这些动态属性的引用误报。
+        参数实际来自 listTeams/countTeams 的 Map，列表与总数继续共用本片段。
+    -->
     <sql id="teamWhere">
         <where>
+            <!--suppress XmlUnresolvedReference -->
             <if test="status != null">
                 AND status=#{status}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="!admin">
                 AND status='ACTIVE'
                     AND
                 <choose>
+                    <!--suppress XmlUnresolvedReference -->
                     <when test="visibleTeams.size() > 0">
                         id IN
+                        <!--suppress XmlUnresolvedReference -->
                         <foreach collection="visibleTeams" item="id" open="(" close=")" separator=",">
                             #{id}
                         </foreach>
@@ -115,6 +138,7 @@
             </if>
         </where>
     </sql>
+
     <select id="listTeams" resultType="com.aigate.contracts.dto.TeamDTO">
         SELECT id, name, status, version, created_at, updated_at
         FROM team
@@ -123,25 +147,36 @@
         LIMIT #{size}
         OFFSET #{offset}
     </select>
+
     <select id="countTeams" resultType="long">
         SELECT COUNT(*)
         FROM team
         <include refid="teamWhere"/>
     </select>
-    <!-- 员工查询先限定可见团队，再计算总数和分页，防止通过 total 泄露组织数据。 -->
+
+    <!-- 员工列表和 COUNT 共用这些条件，先限定可管理团队，再分页或统计总数。 -->
+    <!--
+        MyBatisX 1.7.7 无法识别共享片段的参数，下方仅忽略这些动态属性的引用误报。
+        参数实际来自 listEmployees/countEmployees 的 Map，列表与总数继续共用本片段。
+    -->
     <sql id="employeeWhere">
         <where>
+            <!--suppress XmlUnresolvedReference -->
             <if test="status != null">
                 AND status=#{status}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="primaryTeamId != null">
                 AND primary_team_id=#{primaryTeamId}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="!admin">
                 AND
                 <choose>
+                    <!--suppress XmlUnresolvedReference -->
                     <when test="visibleTeams.size() > 0">
                         primary_team_id IN
+                        <!--suppress XmlUnresolvedReference -->
                         <foreach collection="visibleTeams" item="id" open="(" close=")" separator=",">
                             #{id}
                         </foreach>
@@ -153,6 +188,7 @@
             </if>
         </where>
     </sql>
+
     <select id="listEmployees" resultType="com.aigate.contracts.dto.EmployeeDTO">
         SELECT id, employee_code, display_name, primary_team_id, status, version, created_at, updated_at
         FROM employee
@@ -161,11 +197,13 @@
         LIMIT #{size}
         OFFSET #{offset}
     </select>
+
     <select id="countEmployees" resultType="long">
         SELECT COUNT(*)
         FROM employee
         <include refid="employeeWhere"/>
     </select>
+
     <select id="countActiveRoleAssignments" resultType="int">
         SELECT COUNT(*)
         FROM role_assignment
@@ -175,11 +213,14 @@
             AND scope_id=#{scopeId}
             AND revoked_at IS NULL
     </select>
+
+    <!-- 新增角色关系；同一关系已经存在但被撤销时，清除撤销时间。 -->
     <insert id="grantRole">
         INSERT INTO role_assignment(employee_id,role_code,scope_type,scope_id,revoked_at,created_at,updated_at)
         VALUES(#{employeeId},#{roleCode},#{scopeType},#{scopeId},NULL,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))
         ON DUPLICATE KEY UPDATE revoked_at=NULL,updated_at=UTC_TIMESTAMP(6)
     </insert>
+
     <update id="revokeRole">
         UPDATE role_assignment
         SET revoked_at=UTC_TIMESTAMP(6),updated_at=UTC_TIMESTAMP(6)
@@ -189,7 +230,8 @@
             AND scope_id=#{scopeId}
             AND revoked_at IS NULL
     </update>
-    <!-- 内部鉴权元数据显式列出字段，secret_digest 仅用于 WHERE 匹配，不作为查询结果返回。 -->
+
+    <!-- 列出内部查询需要的字段；secret_digest 只用于匹配，不放入查询结果。 -->
     <sql id="credentialColumns">
         id,
         employee_id,
@@ -202,6 +244,7 @@
         issued_actor_id,
         issue_idempotency_key
     </sql>
+
     <select id="selectCredentialByDigest" resultType="com.felix.aigatecore.identity.ManagementCredentialDO">
         SELECT
         <include refid="credentialColumns"/>
@@ -209,7 +252,8 @@
         WHERE secret_digest=#{digest}
             AND pepper_key_id=#{pepperKeyId}
     </select>
-    <!-- 签发幂等事实永久保留；查询结果不含密钥明文，重复请求不能重放秘密。 -->
+
+    <!-- 按签发者和幂等键查询历史签发记录，用于阻止重复创建和再次返回密钥。 -->
     <select id="selectIssuedCredential" resultType="com.felix.aigatecore.identity.ManagementCredentialDO">
         SELECT
         <include refid="credentialColumns"/>
@@ -218,22 +262,27 @@
             AND issued_actor_id=#{actorId}
             AND issue_idempotency_key=#{key}
     </select>
+
     <select id="selectCredentialById" resultType="com.felix.aigatecore.identity.ManagementCredentialDO">
         SELECT
         <include refid="credentialColumns"/>
         FROM management_credential
         WHERE id=#{id}
     </select>
+
     <insert id="insertCredential" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO management_credential(employee_id,key_prefix,secret_digest,pepper_key_id,expires_at,issued_actor_type,issued_actor_id,issue_idempotency_key,created_at)
         VALUES(#{employeeId},#{keyPrefix},#{digest},#{pepperKeyId},#{expiresAt},#{actorType},#{actorId},#{key},UTC_TIMESTAMP(6))
     </insert>
+
+    <!-- 只更新尚未吊销的凭证；服务层根据影响行数判断是否追加审计。 -->
     <update id="revokeCredential">
         UPDATE management_credential
         SET revoked_at=UTC_TIMESTAMP(6)
         WHERE id=#{id}
             AND revoked_at IS NULL
     </update>
+
     <select id="listCredentialMetadata" resultType="com.aigate.contracts.dto.ManagementCredentialMetadataDTO">
         SELECT id,key_prefix,expires_at,revoked_at,created_at
         FROM management_credential
@@ -242,38 +291,53 @@
         LIMIT #{size}
         OFFSET #{offset}
     </select>
+
     <select id="countCredentialsByEmployeeId" resultType="long">
         SELECT COUNT(*)
         FROM management_credential
         WHERE employee_id=#{employeeId}
     </select>
-    <!-- 与业务写入使用同一事务；changed_fields_json 仅包含字段名，禁止写入字段值或密钥。 -->
+
+    <!-- 与业务修改在同一事务中写入；changed_fields_json 只保存字段名。 -->
     <insert id="insertAuditEvent">
         INSERT INTO admin_audit_event(actor_type,actor_id,action,target_type,target_id,changed_fields_json,trace_id,occurred_at)
         VALUES(#{actorType},#{actorId},#{action},#{targetType},#{targetId},#{changedFields},#{traceId},UTC_TIMESTAMP(6))
     </insert>
+
+    <!-- 审计列表和 COUNT 共用时间、操作者及目标条件，查询值均使用参数绑定。 -->
+    <!--
+        MyBatisX 1.7.7 无法识别共享片段的参数，下方仅忽略这些动态属性的引用误报。
+        参数实际来自 listAuditEvents/countAuditEvents 的 Map，列表与总数继续共用本片段。
+    -->
     <sql id="auditWhere">
         <where>
+            <!--suppress XmlUnresolvedReference -->
             <if test="actorType != null">
                 AND actor_type=#{actorType}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="actorId != null">
                 AND actor_id=#{actorId}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="targetType != null">
                 AND target_type=#{targetType}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="targetId != null">
                 AND target_id=#{targetId}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="from != null">
                 AND occurred_at &gt;= #{from}
             </if>
+            <!--suppress XmlUnresolvedReference -->
             <if test="to != null">
                 AND occurred_at &lt;= #{to}
             </if>
         </where>
     </sql>
+
     <select id="listAuditEvents" resultType="map">
         SELECT id, actor_type, actor_id, action, target_type, target_id, changed_fields_json, trace_id, occurred_at
         FROM admin_audit_event
@@ -282,6 +346,7 @@
         LIMIT #{size}
         OFFSET #{offset}
     </select>
+
     <select id="countAuditEvents" resultType="long">
         SELECT COUNT(*)
         FROM admin_audit_event

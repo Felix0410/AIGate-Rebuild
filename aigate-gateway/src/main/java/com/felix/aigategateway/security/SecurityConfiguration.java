@@ -1,7 +1,9 @@
 package com.felix.aigategateway.security;
 
 import com.aigate.contracts.ApiError;
+
 import java.util.UUID;
+
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +14,7 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.firewall.RequestRejectedHandler;
+
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -19,7 +22,7 @@ import tools.jackson.databind.ObjectMapper;
  *
  * @author AIGate
  */
-@Configuration(proxyBeanMethods = false)
+@Configuration(proxyBeanMethods = false) // 关闭代理方法，该类中的bean没有相互依赖
 public class SecurityConfiguration {
 
     /**
@@ -31,6 +34,7 @@ public class SecurityConfiguration {
     @Bean
     RequestRejectedHandler requestRejectedHandler(ObjectMapper json) {
         return (request, response, failure) -> {
+            // 为防火墙拒绝的请求生成 ID，返回 400 JSON 响应并禁止缓存。
             String id = UUID.randomUUID().toString();
             response.setStatus(400);
             response.setContentType("application/json");
@@ -48,6 +52,7 @@ public class SecurityConfiguration {
      */
     @Bean
     UserDetailsService userDetailsService() {
+        // 提供空用户服务，关闭 Spring Boot 默认账号的自动创建。
         return new InMemoryUserDetailsManager();
     }
 
@@ -59,8 +64,11 @@ public class SecurityConfiguration {
      */
     @Bean
     FilterRegistrationBean<GatewayBoundaryFilter> disableContainerRegistration(GatewayBoundaryFilter filter) {
+        // 关闭 Servlet 自动注册，过滤器只在 Spring Security 链中执行一次。
         var registration = new FilterRegistrationBean<>(filter);
+
         registration.setEnabled(false);
+
         return registration;
     }
 
@@ -73,7 +81,7 @@ public class SecurityConfiguration {
      */
     @Bean
     SecurityFilterChain security(HttpSecurity http, GatewayBoundaryFilter filter) throws Exception {
-        // Gateway 校验入口边界，Core 对每次管理请求依据当前数据库状态重新认证授权。
+        // 关闭 CSRF、会话和请求缓存，将边界过滤器放在授权过滤器之前。
         return http.csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .requestCache(cache -> cache.disable()).authorizeHttpRequests(auth -> auth.anyRequest().permitAll())

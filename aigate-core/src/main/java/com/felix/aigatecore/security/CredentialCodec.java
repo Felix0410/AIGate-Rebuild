@@ -1,12 +1,15 @@
 package com.felix.aigatecore.security;
 
 import com.aigate.contracts.ApiContractConstants;
+
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Base64;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,11 +25,14 @@ public class CredentialCodec {
     /**
      * 使用 32 字节安全随机数生成带 mgt_ 前缀的无填充 Base64URL 密钥。
      *
-     * @return 当前操作生成或校验后的文本
+     * @return 新生成的完整 mgt_ 管理密钥
      */
     public String newManagementKey() {
+        // 生成 32 字节安全随机数，编码为 mgt_ 开头的无填充 Base64URL 密钥。
         byte[] bytes = new byte[ApiContractConstants.SECRET_RANDOM_BYTES];
+
         random.nextBytes(bytes);
+
         return "mgt_" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
@@ -39,10 +45,13 @@ public class CredentialCodec {
      */
     public byte[] digest(String token, SecuritySettings.Pepper pepper) {
         try {
+            // 1、为本次调用创建 Mac，使用独立 Pepper 计算 HMAC-SHA256 摘要。
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(pepper.bytes(), "HmacSHA256"));
+
             return mac.doFinal(token.getBytes(StandardCharsets.UTF_8));
         } catch (GeneralSecurityException failure) {
+            // 2、计算失败时只返回固定错误，不将密钥放入异常消息。
             throw new IllegalStateException("HMAC unavailable");
         }
     }

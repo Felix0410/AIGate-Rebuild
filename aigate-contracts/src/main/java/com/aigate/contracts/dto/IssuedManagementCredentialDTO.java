@@ -3,10 +3,14 @@ package com.aigate.contracts.dto;
 import java.time.Instant;
 
 /**
- * 仅限首次成功签发响应使用的管理凭证视图，禁止持久化或记录其明文密钥。
+ * 首次签发凭证的响应，包含完整密钥；不能持久化或记录密钥明文。
+ *
+ * <p>
+ * keyPrefix 仅用于识别密钥，不能用于认证；key 才是完整凭证，不能进入日志或持久化元数据。
+ * </p>
  *
  * @param credentialId 目标管理凭证主键
- * @param key 字段名或当前操作的受控幂等标识；凭证明文只允许在首次签发响应使用
+ * @param key 本次首次签发的密钥明文，禁止记录或通过后续查询再次展示
  * @param keyPrefix 可公开的短凭证前缀
  * @param expiresAt UTC 到期时间
  * @author AIGate

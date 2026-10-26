@@ -3,6 +3,8 @@ spring:
     name: aigate-core
   config:
     import: optional:file:${AIGATE_ENV_FILE:.env}[.properties]
+
+  # 数据库会话使用 UTC，应用账号与迁移账号分别配置。
   datasource:
     url: ${AIGATE_DB_URL:jdbc:mysql://127.0.0.1:3306/core_db?connectionTimeZone=UTC&connectTimeout=3000&socketTimeout=3000}
     username: ${AIGATE_DB_USERNAME}
@@ -11,6 +13,8 @@ spring:
     hikari:
       connection-timeout: 3000
       connection-init-sql: "SET time_zone = '+00:00'"
+
+  # 本地允许随应用执行迁移；容器部署关闭此开关，改用独立迁移任务。
   flyway:
     enabled: ${AIGATE_FLYWAY_ENABLED:true}
     locations: classpath:db/migration
@@ -21,6 +25,7 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+
 server:
   address: ${AIGATE_BIND_ADDRESS:127.0.0.1}
   port: ${AIGATE_CORE_PORT:8081}
@@ -28,8 +33,11 @@ server:
   error:
     include-message: never
     include-stacktrace: never
+
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
   configuration:
     map-underscore-to-camel-case: true
+
+    # 根据列名匹配 record 构造参数，不依赖 SELECT 的字段顺序。
     arg-name-based-constructor-auto-mapping: true
