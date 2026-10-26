@@ -246,6 +246,8 @@ abstract class AbstractIdentityIntegrationTest {
      * 清空本场景的临时数据；仅在配置改变时重启服务，避免重复支付启动成本。
      */
     @BeforeEach
+    // 库表由临时 MySQL 容器在运行时创建，仅忽略 IDE 的数据源和 SQL 名称解析提示。
+    @SuppressWarnings({"SqlNoDataSourceInspection", "SqlResolve"})
     protected void emptyFixture() throws Exception {
         // 1、恢复上一场景修改的应用配置，未改动时继续复用 JVM。
         if (core == null || !core.isAlive() || !"INIT".equals(lastCoreMode) || !lastCoreOverrides.isEmpty()) {
