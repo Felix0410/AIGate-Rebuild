@@ -16,7 +16,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * P4仅供finance-test Profile内调用的Fake账务门面，没有HTTP映射或Provider客户端。 锁序：身份协调共享锁 → 员工/操作 → 原币种预算父/分区 → 周桶主键升序。
+ * P4/P5仅供finance-test Profile内调用的Fake账务门面，没有HTTP映射或Provider客户端。 锁序：身份协调共享锁 → 员工/操作 → 原币种预算父/分区 → 周桶主键升序 → Grant主键升序。
  * 管理写先拿身份协调独占锁，与资金操作互斥；数据库事务中没有外部I/O。
  */
 @Service
@@ -38,6 +37,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class FakeFinanceFacade {
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private final FinanceMapper mapper;
+    private final GrantMapper grants;
     private final IdentityMapper identities;
     private final RuntimeIdentityMapper runtime;
     private final CatalogMapper catalog;
@@ -49,15 +49,18 @@ public class FakeFinanceFacade {
      * 装配测试Profile的真实MySQL账务事务。
      *
      * @param mapper 资金存储
+     * @param grants Grant存储
      * @param identities 身份权威
      * @param runtime Agent与ACL存储
      * @param catalog 冻结价格来源
      * @param periods 公司周期
      * @param clock UTC时钟
      */
-    public FakeFinanceFacade(FinanceMapper mapper, IdentityMapper identities, RuntimeIdentityMapper runtime,
+    public FakeFinanceFacade(FinanceMapper mapper, GrantMapper grants, IdentityMapper identities,
+        RuntimeIdentityMapper runtime,
         CatalogMapper catalog, FinancePeriods periods, Clock clock) {
         this.mapper = mapper;
+        this.grants = grants;
         this.identities = identities;
         this.runtime = runtime;
         this.catalog = catalog;
@@ -195,6 +198,15 @@ public class FakeFinanceFacade {
             .forEach(id -> lockedBuckets.put(id, mapper.lockBucketId(values("id", id))));
         var buckets = candidates.stream().map(candidate -> lockedBuckets.get(candidate.id())).toList();
         BigDecimal total = buckets.stream().map(this::available).reduce(ZERO, BigDecimal::add);
+        // Grant的锁按ID升序，消费按FEFO；同一接收者由员工行锁串行化新预留。
+        var candidatesGrants = total.compareTo(maxPoints) < 0
+            ? grants.eligibleGrants(values("employee", employee.id(), "at", at)).stream()
+                .sorted(java.util.Comparator.comparing(GrantRows.Grant::expiresAt)
+                    .thenComparingLong(GrantRows.Grant::id))
+                .toList()
+            : List.<GrantRows.Grant>of();
+        total = total.add(candidatesGrants.stream().map(grant -> grant.issuedPoints()
+            .subtract(grant.usedPoints()).subtract(grant.reservedPoints())).reduce(ZERO, BigDecimal::add));
         if (total.compareTo(maxPoints) < 0) {
             throw ApiException.conflict("INSUFFICIENT_POINTS");
         }
@@ -209,6 +221,22 @@ public class FakeFinanceFacade {
             mapper.insertAllocation(values("reservation", reservationId, "kind", account.bucketKind(),
                 "source", account.id(), "priority", priority, "points", take, "now", at));
             ledger(operationId, "RESERVE", account.bucketKind(), account.id(), "POINTS", null, take, at);
+            remaining = remaining.subtract(take);
+        }
+        int priority = buckets.size();
+        for (var grant : candidatesGrants) {
+            if (remaining.signum() == 0) {
+                break;
+            }
+            BigDecimal take = remaining.min(grant.issuedPoints().subtract(grant.usedPoints())
+                .subtract(grant.reservedPoints()));
+            if (take.signum() == 0) {
+                continue;
+            }
+            grants.changeGrant(values("id", grant.id(), "used", ZERO, "reserved", take, "now", at));
+            mapper.insertAllocation(values("reservation", reservationId, "kind", "GRANT", "source", grant.id(),
+                "priority", priority++, "points", take, "now", at));
+            ledger(operationId, "RESERVE", "GRANT", grant.id(), "POINTS", null, take, at);
             remaining = remaining.subtract(take);
         }
         return FinanceManagementService.operationDto(mapper, mapper.operation(values("key", request.operationKey())));
@@ -307,19 +335,30 @@ public class FakeFinanceFacade {
         }
         var points = mapper.points(values("id", operation.id()));
         var allocations = mapper.allocations(values("id", points.id()));
-        // 锁按主键升序，消费顺序仍按原allocation priority，避免把旧周资金转到新周。
-        var locked = new ArrayList<FinanceRows.Bucket>();
-        allocations.stream().map(FinanceRows.Allocation::sourceId).sorted()
-            .forEach(id -> locked.add(mapper.lockBucketId(values("id", id))));
-        if (locked.stream().anyMatch(java.util.Objects::isNull)) {
-            throw new IllegalStateException("Missing reserved quota account");
+        // 周桶先锁，Grant后锁，各表内按ID升序；到期/撤销不能阻止原预留的合法结算。
+        for (var allocation : allocations.stream().filter(x -> !"GRANT".equals(x.sourceType()))
+            .sorted(java.util.Comparator.comparingLong(FinanceRows.Allocation::sourceId)).toList()) {
+            if (mapper.lockBucketId(values("id", allocation.sourceId())) == null) {
+                throw new IllegalStateException("Missing reserved quota account");
+            }
+        }
+        for (var allocation : allocations.stream().filter(x -> "GRANT".equals(x.sourceType()))
+            .sorted(java.util.Comparator.comparingLong(FinanceRows.Allocation::sourceId)).toList()) {
+            if (grants.lockGrant(values("id", allocation.sourceId())) == null) {
+                throw new IllegalStateException("Missing reserved Grant");
+            }
         }
         BigDecimal remaining = actualPoints.min(points.reservedPoints());
         for (var allocation : allocations) {
             BigDecimal used = remaining.min(allocation.reservedPoints());
             BigDecimal released = allocation.reservedPoints().subtract(used);
-            mapper.changeBucket(values("id", allocation.sourceId(), "used", used,
-                "reserved", allocation.reservedPoints().negate(), "now", at));
+            var accountChange = values("id", allocation.sourceId(), "used", used,
+                "reserved", allocation.reservedPoints().negate(), "now", at);
+            if ("GRANT".equals(allocation.sourceType())) {
+                grants.changeGrant(accountChange);
+            } else {
+                mapper.changeBucket(accountChange);
+            }
             mapper.finishAllocation(values("id", allocation.id(), "used", used, "released", released, "now", at));
             ledger(operation.id(), "UNRESERVE", allocation.sourceType(), allocation.sourceId(), "POINTS", null,
                 allocation.reservedPoints().negate(), at);

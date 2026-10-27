@@ -39,6 +39,9 @@ class AigateCoreApplicationTests {
     @MockitoBean
     com.felix.aigatecore.finance.FinanceMapper financeMapper;
 
+    @MockitoBean
+    com.felix.aigatecore.finance.GrantMapper grantMapper;
+
     /**
      * 为装配测试生成临时安全配置，禁止复用开发环境真实密钥。
      *

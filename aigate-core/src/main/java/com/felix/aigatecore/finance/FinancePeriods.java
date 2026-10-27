@@ -3,6 +3,7 @@ package com.felix.aigatecore.finance;
 import com.felix.aigatecore.web.ApiException;
 import java.time.DayOfWeek;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
@@ -54,5 +55,25 @@ public class FinancePeriods {
 
     String monthName(Instant start) {
         return YearMonth.from(start.atZone(zone)).toString();
+    }
+
+    Instant date(String value) {
+        try {
+            if (value == null || !value.matches("[1-9][0-9]{3}-[0-9]{2}-[0-9]{2}")) {
+                throw ApiException.invalid();
+            }
+            Instant result = LocalDate.parse(value).atStartOfDay(zone).toInstant();
+            if (result.isBefore(Instant.parse("1000-01-01T00:00:00Z"))
+                || !result.isBefore(Instant.parse("+10000-01-01T00:00:00Z"))) {
+                throw ApiException.invalid();
+            }
+            return result;
+        } catch (java.time.DateTimeException failure) {
+            throw ApiException.invalid();
+        }
+    }
+
+    String dateName(Instant at) {
+        return at.atZone(zone).toLocalDate().toString();
     }
 }

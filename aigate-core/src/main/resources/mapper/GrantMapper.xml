@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.felix.aigatecore.finance.GrantMapper">
+    <select id="pool" resultType="com.felix.aigatecore.finance.GrantRows$Pool">
+        SELECT * FROM team_pool WHERE team_id=#{team} AND period_start=#{start}
+    </select>
+    <select id="lockPool" resultType="com.felix.aigatecore.finance.GrantRows$Pool">
+        SELECT * FROM team_pool WHERE team_id=#{team} AND period_start=#{start} FOR UPDATE
+    </select>
+    <select id="overlap" resultType="java.lang.Long">
+        SELECT id FROM team_pool WHERE team_id=#{team} AND id != #{exclude} AND period_start &lt; #{end} AND period_end &gt; #{start} LIMIT 1 FOR UPDATE
+    </select>
+    <select id="currentPool" resultType="com.felix.aigatecore.finance.GrantRows$Pool">
+        SELECT * FROM team_pool WHERE team_id=#{team} AND status='ACTIVE' AND period_start &lt;= #{at} AND period_end &gt; #{at} ORDER BY id FOR UPDATE
+    </select>
+    <insert id="insertPool" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO team_pool(team_id,period_start,period_end,limit_points,created_by,created_at,updated_at) VALUES(#{team},#{start},#{end},#{limit},#{actor},#{now},#{now})
+    </insert>
+    <update id="updatePool">
+        UPDATE team_pool SET period_end=#{end},limit_points=#{limit},version=version+1,updated_at=#{now} WHERE id=#{id} AND version=#{version}
+    </update>
+    <update id="issuePool">
+        UPDATE team_pool SET issued_points=issued_points+#{amount},version=version+1,updated_at=#{now} WHERE id=#{id} AND issued_points+reserved_issue_points+#{amount} &lt;= limit_points
+    </update>
+    <select id="receipt" resultType="com.felix.aigatecore.finance.GrantRows$Receipt">
+        SELECT * FROM team_grant_issue_receipt WHERE issue_operation_key=#{key} FOR UPDATE
+    </select>
+    <insert id="insertGrant" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO team_grant(issuer_team_id,recipient_employee_id,team_pool_id,grant_operation_key,issued_points,expires_at,issued_at,issued_by,issued_reason_code,created_at,updated_at) VALUES(#{team},#{recipient},#{pool},#{key},#{amount},#{expires},#{now},#{actor},#{reason},#{now},#{now})
+    </insert>
+    <select id="grant" resultType="com.felix.aigatecore.finance.GrantRows$Grant">
+        SELECT * FROM team_grant WHERE id=#{id}
+    </select>
+    <select id="lockGrant" resultType="com.felix.aigatecore.finance.GrantRows$Grant">
+        SELECT * FROM team_grant WHERE id=#{id} FOR UPDATE
+    </select>
+    <insert id="insertReceipt">
+        INSERT INTO team_grant_issue_receipt(issue_operation_key,team_pool_id,team_grant_id,actor_employee_id,recipient_employee_id,amount_points,operation_digest,created_at) VALUES(#{key},#{pool},#{grant},#{actor},#{recipient},#{amount},#{digest},#{now})
+    </insert>
+    <update id="revokeGrant">
+        UPDATE team_grant SET status='REVOKED_FOR_NEW_USE',revoked_at=#{now},revoked_by=#{actor},revoke_reason_code=#{reason},version=version+1,updated_at=#{now} WHERE id=#{id} AND status != 'REVOKED_FOR_NEW_USE'
+    </update>
+    <select id="eligibleGrants" resultType="com.felix.aigatecore.finance.GrantRows$Grant">
+        SELECT * FROM team_grant WHERE recipient_employee_id=#{employee} AND status='ACTIVE' AND expires_at &gt; #{at} ORDER BY id FOR UPDATE
+    </select>
+    <update id="changeGrant">
+        UPDATE team_grant SET used_points=used_points+#{used},reserved_points=reserved_points+#{reserved},version=version+1,updated_at=#{now} WHERE id=#{id}
+    </update>
+    <select id="listGrants" resultType="com.felix.aigatecore.finance.GrantRows$Grant">
+        SELECT * FROM team_grant <where>
+  <choose><!-- Map参数由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<when test="team != null">issuer_team_id=#{team}</when><otherwise>recipient_employee_id=#{recipient}</otherwise></choose>
+  <!--suppress XmlUnresolvedReference -->
+<if test="status != null"> AND (CASE WHEN status='ACTIVE' AND expires_at &lt;= #{at} THEN 'EXPIRED' ELSE status END)=#{status} </if>
+</where> ORDER BY id LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countGrants" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM team_grant <where>
+  <choose><!-- Map参数由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<when test="team != null">issuer_team_id=#{team}</when><otherwise>recipient_employee_id=#{recipient}</otherwise></choose>
+  <!--suppress XmlUnresolvedReference -->
+<if test="status != null"> AND (CASE WHEN status='ACTIVE' AND expires_at &lt;= #{at} THEN 'EXPIRED' ELSE status END)=#{status} </if>
+</where>
+    </select>
+    <insert id="insertIssueLedger">
+        INSERT INTO ledger_entry(event_kind,source_type,source_id,unit,delta_amount,business_at,operation_event_key,created_at) VALUES('TEAM_GRANT_ISSUED','TEAM_GRANT',#{grant},'POINTS',#{amount},#{now},#{businessKey},#{now})
+    </insert>
+    <insert id="insertIssueOutbox">
+        INSERT INTO outbox_event(event_id,business_event_key,aggregate_type,aggregate_id,aggregate_revision,event_type,schema_version,business_at,payload_json,payload_digest,created_at,updated_at) VALUES(#{eventId},#{businessKey},'TEAM_GRANT',#{grant},1,'TEAM_GRANT_ISSUED_V1',1,#{now},#{payload},#{payloadDigest},#{now},#{now})
+    </insert>
+</mapper>

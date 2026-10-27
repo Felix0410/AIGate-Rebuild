@@ -254,7 +254,7 @@ class ComposeIT {
             compose("run", "--rm", "migrate");
             String history = compose("exec", "-T", "-e", "MYSQL_PWD", "mysql", "mysql", "-uroot", "-Nse",
                 "SELECT COUNT(*) FROM core_db.flyway_schema_history WHERE success=1");
-            assertEquals("4", history.strip());
+            assertEquals("5", history.strip());
             compose("logs", "--no-color");
         } finally {
             try {
