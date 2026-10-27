@@ -131,6 +131,19 @@ public class RuntimeSecuritySettings {
     }
 
     /**
+     * 检查其他用途是否复用了运行 Pepper，包括已配置的过期历史材料。
+     *
+     * @param material 待隔离检查的材料
+     * @return 任一当前或历史运行 Pepper 相同时为true
+     */
+    public boolean usesPepper(byte[] material) {
+        return Arrays.equals(agent.current().bytes(), material)
+            || Arrays.equals(employee.current().bytes(), material)
+            || (agent.previous() != null && Arrays.equals(agent.previous().bytes(), material))
+            || (employee.previous() != null && Arrays.equals(employee.previous().bytes(), material));
+    }
+
+    /**
      * 获取当前可用于认证的 Pepper，不接受过期历史版本。
      *
      * @param agentKey 是否为 Agent 凭证

@@ -31,3 +31,14 @@
 | P11～P12 | 读模型可否延迟、全局恢复为何必须有受信证据 | Outbox/Inbox、重复与漏消息、MySQL锁与多进程故障边界 |
 
 每完成一个Phase在[Progress](./10-progress.md)记录已获得的证据，然后更新[面试记录](./12-interview-notes.md)，不要把设计中的未来经验写成亲自完成。
+
+
+## P3 已落地的学习路线
+
+1. `CatalogController → CatalogService/CatalogCredentialService → CatalogMapper`：HTTP白名单、当前RBAC、事务与DTO投影如何分工。返回强类型DTO，内部带密文DO不得直接序列化。
+2. 价格草稿不切当前指针；发布时锁父资源并CAS，价格状态、父指针和审计一次提交。BigDecimal固定6/8位字符串，UNNECESSARY拒绝隐式舍入，原币种不做汇率换算。
+3. HMAC是不可逆收据认证，AES-GCM是需要内部恢复的Secret保密；随机IV、AAD和版本化密钥分别解决重复nonce、跨行搬移密文和历史追验。
+4. 普通配置、独立技术批准、P6数据治理、P7一次出站许可是不同事实。P3Manifest按完整规范配置摘要匹配，不能把evidenceRef字符串当签字批准。
+5. DNS解析安全与真实网络连接安全不同。P3验证全部答案和有界等待；P7仍需连接固定IP、TLS主机验证、重定向与代理保护。
+
+实际测试/限制见[Progress](./10-progress.md)；这些是本地测试经验，不代表生产供应商、性能或后续Phase能力。

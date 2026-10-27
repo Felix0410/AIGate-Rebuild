@@ -3,6 +3,7 @@ package com.felix.aigatecore.web;
 import com.aigate.contracts.ApiContractConstants;
 
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeParseException;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -80,6 +81,40 @@ public final class ValidatedBody {
     public boolean has(String key) {
         // 检查客户端是否提交了该字段，供 PATCH 和审计使用。
         return node.has(key);
+    }
+
+    /**
+     * 读取结构化子对象，交给领域专用的封闭 Schema 校验器，不允许标量或 null。
+     *
+     * @param key 当前接口允许的对象字段
+     * @return 与原请求分离的对象副本
+     */
+    public JsonNode object(String key) {
+        JsonNode value = node.get(key);
+        if (value == null || !value.isObject()) {
+            throw ApiException.invalid();
+        }
+        return value.deepCopy();
+    }
+
+    /**
+     * 原样读取秘密或定点价格，不去空白、不替换无法编码的 Unicode 字符。
+     *
+     * @param key 当前接口允许的字符串字段
+     * @param maxBytes UTF-8最大字节数
+     * @return 通过类型和字节长度检查的原字符串
+     */
+    public String rawText(String key, int maxBytes) {
+        JsonNode value = node.get(key);
+        if (value == null || !value.isString()) {
+            throw ApiException.invalid();
+        }
+        String text = value.asString();
+        if (text.isEmpty() || !StandardCharsets.UTF_8.newEncoder().canEncode(text)
+            || text.getBytes(StandardCharsets.UTF_8).length > maxBytes) {
+            throw ApiException.invalid();
+        }
+        return text;
     }
 
     /**

@@ -73,6 +73,10 @@ abstract class AbstractIdentityIntegrationTest {
 
     protected final String employeePepper = Base64.getEncoder().encodeToString(randomBytes());
 
+    protected final String providerEncryptionKey = Base64.getEncoder().encodeToString(randomBytes());
+
+    protected final String providerIssuePepper = Base64.getEncoder().encodeToString(randomBytes());
+
     protected MySQLContainer mysql;
 
     protected Process core;
@@ -218,7 +222,7 @@ abstract class AbstractIdentityIntegrationTest {
         assertEquals(21, Runtime.version().feature(), "Use JDK21 to run the P1 contract");
         Files.createDirectories(outputDirectory);
         secretValues.addAll(List.of(rootPassword, appPassword, migratorPassword, serviceToken, bootstrapToken, pepper,
-            agentPepper, employeePepper));
+            agentPepper, employeePepper, providerEncryptionKey, providerIssuePepper));
 
         // 2、启动独立 MySQL 容器，创建只读写数据的应用账号和可执行 DDL 的迁移账号。
         mysql = new MySQLContainer(DockerImageName.parse(MYSQL_IMAGE).asCompatibleSubstituteFor("mysql"))
@@ -270,6 +274,8 @@ abstract class AbstractIdentityIntegrationTest {
             var statement = db.createStatement()) {
             statement.execute("SET FOREIGN_KEY_CHECKS=0");
             for (String table : List.of("admin_audit_event", "management_credential", "role_assignment",
+                "agent_model_permission", "provider_credential", "deployment_purchase_price_version",
+                "model_points_price_version", "model_deployment", "logical_model", "provider",
                 "employee_agent_permission", "agent_api_key", "employee_credential", "agent", "employee",
                 "team", "bootstrap_control")) {
                 statement.execute("TRUNCATE TABLE " + table);
@@ -308,6 +314,10 @@ abstract class AbstractIdentityIntegrationTest {
         environment.put("AIGATE_AGENT_PEPPER", agentPepper);
         environment.put("AIGATE_EMPLOYEE_PEPPER_KEY_ID", "employee-v1");
         environment.put("AIGATE_EMPLOYEE_PEPPER", employeePepper);
+        environment.put("AIGATE_PROVIDER_ENCRYPTION_KEY_ID", "provider-enc-v1");
+        environment.put("AIGATE_PROVIDER_ENCRYPTION_KEY", providerEncryptionKey);
+        environment.put("AIGATE_PROVIDER_ISSUE_PEPPER_KEY_ID", "provider-issue-v1");
+        environment.put("AIGATE_PROVIDER_ISSUE_PEPPER", providerIssuePepper);
         environment.put("AIGATE_BOOTSTRAP_MODE", mode);
         environment.put("AIGATE_BOOTSTRAP_TOKEN", bootstrapToken);
         environment.put("AIGATE_BOOTSTRAP_ALLOWED_CIDRS", "127.0.0.1/32");

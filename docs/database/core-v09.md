@@ -13,6 +13,8 @@ LOW的公司补贴/员工周Cap/本地Token与FallbackPolicy，并追加Invocati
 ## 3. 规范 SQL（5 张新增表，含所需旧表ALTER）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 CREATE TABLE fallback_route_policy (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   agent_id BIGINT UNSIGNED NOT NULL,

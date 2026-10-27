@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.felix.aigatecore.catalog.CatalogMapper">
+    <!-- Map中的动态键由服务层构造；MyBatisX无法推导时仅局部忽略OGNL名称检查。 -->
+
+    <select id="selectProvider" resultType="com.felix.aigatecore.catalog.ProviderDO">
+        SELECT id, code, name, hosting_mode, status, base_url_host_policy, version, created_at, updated_at
+        FROM provider
+        WHERE id = #{id}
+    </select>
+
+    <select id="lockProvider" resultType="com.felix.aigatecore.catalog.ProviderDO">
+        SELECT id, code, name, hosting_mode, status, base_url_host_policy, version, created_at, updated_at
+        FROM provider
+        WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="selectModel" resultType="com.felix.aigatecore.catalog.LogicalModelDO">
+        SELECT id, model_code, display_name, model_family, immutable_model_revision, capability_profile_json,
+        status, active_points_price_version_id, active_routing_revision_id, version, created_at, updated_at
+        FROM logical_model
+        WHERE id = #{id}
+    </select>
+
+    <select id="lockModel" resultType="com.felix.aigatecore.catalog.LogicalModelDO">
+        SELECT id, model_code, display_name, model_family, immutable_model_revision, capability_profile_json,
+        status, active_points_price_version_id, active_routing_revision_id, version, created_at, updated_at
+        FROM logical_model
+        WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="selectDeployment" resultType="com.felix.aigatecore.catalog.DeploymentDO">
+        SELECT id, logical_model_id, provider_id, deployment_code, endpoint_uri, remote_model_name, hosting_mode,
+        region_code, capability_revision, adapter_compatibility_json, adapter_evidence_ref, cost_model, status,
+        routing_priority, routing_weight, max_concurrent, capacity_pool_id, active_purchase_price_version_id,
+        active_credential_id, version, created_at, updated_at
+        FROM model_deployment
+        WHERE id = #{id}
+    </select>
+
+    <select id="lockDeployment" resultType="com.felix.aigatecore.catalog.DeploymentDO">
+        SELECT id, logical_model_id, provider_id, deployment_code, endpoint_uri, remote_model_name, hosting_mode,
+        region_code, capability_revision, adapter_compatibility_json, adapter_evidence_ref, cost_model, status,
+        routing_priority, routing_weight, max_concurrent, capacity_pool_id, active_purchase_price_version_id,
+        active_credential_id, version, created_at, updated_at
+        FROM model_deployment
+        WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="selectCredential" resultType="com.felix.aigatecore.catalog.ProviderCredentialDO">
+        SELECT id, deployment_id, credential_kind, encrypted_secret, iv, encryption_key_id, credential_revision,
+        issued_by_employee_id, issue_idempotency_key, issue_request_hmac, issue_hmac_key_id, status, created_at,
+        rotated_at, revoked_at
+        FROM provider_credential
+        WHERE id = #{id}
+    </select>
+
+    <select id="lockCredential" resultType="com.felix.aigatecore.catalog.ProviderCredentialDO">
+        SELECT id, deployment_id, credential_kind, encrypted_secret, iv, encryption_key_id, credential_revision,
+        issued_by_employee_id, issue_idempotency_key, issue_request_hmac, issue_hmac_key_id, status, created_at,
+        rotated_at, revoked_at
+        FROM provider_credential
+        WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="selectModelByCode" resultType="com.felix.aigatecore.catalog.LogicalModelDO">
+        SELECT id, model_code, display_name, model_family, immutable_model_revision, capability_profile_json,
+        status, active_points_price_version_id, active_routing_revision_id, version, created_at, updated_at
+        FROM logical_model
+        WHERE model_code = #{code}
+    </select>
+
+    <insert id="insertProvider" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO provider(code, name, hosting_mode, base_url_host_policy, status, version, created_at,
+        updated_at)
+        VALUES(#{code}, #{name}, #{hostingMode}, #{policy}, 'ACTIVE',0, #{now}, #{now})
+    </insert>
+
+    <update id="updateProvider">
+        UPDATE provider
+        SET name = #{name}, status = #{status}, base_url_host_policy = #{policy}, version=version+1, updated_at =
+        #{now}
+        WHERE id = #{id} AND version = #{expectedVersion}
+    </update>
+
+    <insert id="insertModel" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO logical_model(model_code, display_name, model_family, immutable_model_revision,
+        capability_profile_json, status, version, created_at, updated_at)
+        VALUES(#{modelCode}, #{displayName}, #{modelFamily}, #{immutableModelRevision}, #{profile}, 'ACTIVE',0,
+        #{now}, #{now})
+    </insert>
+
+    <update id="updateModel">
+        UPDATE logical_model
+        SET display_name = #{displayName}, status = #{status}, version=version+1, updated_at = #{now}
+        WHERE id = #{id} AND version = #{expectedVersion}
+    </update>
+
+    <insert id="insertDeployment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO model_deployment(logical_model_id, provider_id, deployment_code, endpoint_uri,
+        remote_model_name, hosting_mode, region_code, capability_revision, adapter_compatibility_json,
+        adapter_evidence_ref, cost_model, status, routing_priority, routing_weight, max_concurrent, version,
+        created_at, updated_at)
+        VALUES(#{modelId}, #{providerId}, #{deploymentCode}, #{endpointUri}, #{remoteModelName}, #{hostingMode},
+        #{regionCode}, #{capabilityRevision}, #{adapter}, #{evidence}, #{costModel}, 'DRAFT', #{routingPriority},
+        #{routingWeight}, #{maxConcurrent},0, #{now}, #{now})
+    </insert>
+
+    <update id="bindDeploymentIdentity">
+        UPDATE model_deployment
+        SET adapter_compatibility_json=JSON_SET(adapter_compatibility_json, '$.deploymentId', id)
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateDeployment">
+        UPDATE model_deployment
+        SET status = #{status}, routing_priority = #{routingPriority}, routing_weight = #{routingWeight},
+        max_concurrent = #{maxConcurrent}, version=version+1, updated_at = #{now}
+        WHERE id = #{id} AND version = #{expectedVersion}
+    </update>
+
+    <select id="listProviders" resultType="com.felix.aigatecore.catalog.ProviderDO">
+        SELECT id, code, name, hosting_mode, status, base_url_host_policy, version, created_at, updated_at
+        FROM provider
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">AND status = #{status}</if>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="hostingMode != null">AND hosting_mode = #{hostingMode}</if>
+        </where>
+        ORDER BY id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countProviders" resultType="long">
+        SELECT COUNT(*)
+        FROM provider
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">AND status = #{status}</if>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="hostingMode != null">AND hosting_mode = #{hostingMode}</if>
+        </where>
+    </select>
+
+    <select id="listModels" resultType="com.felix.aigatecore.catalog.LogicalModelDO">
+        SELECT id, model_code, display_name, model_family, immutable_model_revision, capability_profile_json,
+        status, active_points_price_version_id, active_routing_revision_id, version, created_at, updated_at
+        FROM logical_model
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">AND status = #{status}</if>
+        </where>
+        ORDER BY id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countModels" resultType="long">
+        SELECT COUNT(*)
+        FROM logical_model
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="listDeployments" resultType="com.felix.aigatecore.catalog.DeploymentDO">
+        SELECT id, logical_model_id, provider_id, deployment_code, endpoint_uri, remote_model_name, hosting_mode,
+        region_code, capability_revision, adapter_compatibility_json, adapter_evidence_ref, cost_model, status,
+        routing_priority, routing_weight, max_concurrent, capacity_pool_id, active_purchase_price_version_id,
+        active_credential_id, version, created_at, updated_at
+        FROM model_deployment
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">AND status = #{status}</if>
+            AND logical_model_id = #{modelId}
+        </where>
+        ORDER BY id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countDeployments" resultType="long">
+        SELECT COUNT(*)
+        FROM model_deployment
+        <where>
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null">AND status = #{status}</if>
+            AND logical_model_id = #{modelId}
+        </where>
+    </select>
+
+    <select id="lockActiveProviderDeployments" resultType="com.felix.aigatecore.catalog.DeploymentDO">
+        SELECT id, logical_model_id, provider_id, deployment_code, endpoint_uri, remote_model_name, hosting_mode,
+        region_code, capability_revision, adapter_compatibility_json, adapter_evidence_ref, cost_model, status,
+        routing_priority, routing_weight, max_concurrent, capacity_pool_id, active_purchase_price_version_id,
+        active_credential_id, version, created_at, updated_at
+        FROM model_deployment
+        WHERE provider_id = #{id} AND status='ACTIVE'
+        ORDER BY id FOR UPDATE
+    </select>
+
+    <select id="activeModelDeployments" resultType="com.felix.aigatecore.catalog.DeploymentDO">
+        SELECT id, logical_model_id, provider_id, deployment_code, endpoint_uri, remote_model_name, hosting_mode,
+        region_code, capability_revision, adapter_compatibility_json, adapter_evidence_ref, cost_model, status,
+        routing_priority, routing_weight, max_concurrent, capacity_pool_id, active_purchase_price_version_id,
+        active_credential_id, version, created_at, updated_at
+        FROM model_deployment
+        WHERE logical_model_id = #{id} AND status='ACTIVE'
+        ORDER BY id
+    </select>
+
+    <select id="selectPrice" resultType="com.felix.aigatecore.catalog.CatalogPriceDO">
+        SELECT id,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">logical_model_id</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_id</otherwise>
+        </choose>
+        AS owner_id, revision,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">NULL</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>currency</otherwise>
+        </choose>
+        AS currency,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">point_per_1k_input</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>amount_per_1k_input</otherwise>
+        </choose>
+        AS input_price,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">point_per_1k_output</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>amount_per_1k_output</otherwise>
+        </choose>
+        AS output_price, status, effective_from, published_at
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">model_points_price_version</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_purchase_price_version</otherwise>
+        </choose>
+        WHERE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">logical_model_id</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_id</otherwise>
+        </choose>
+        = #{ownerId} AND revision = #{revision}
+    </select>
+
+    <select id="selectPriceById" resultType="com.felix.aigatecore.catalog.CatalogPriceDO">
+        SELECT id,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">logical_model_id</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_id</otherwise>
+        </choose>
+        AS owner_id, revision,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">NULL</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>currency</otherwise>
+        </choose>
+        AS currency,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">point_per_1k_input</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>amount_per_1k_input</otherwise>
+        </choose>
+        AS input_price,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">point_per_1k_output</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>amount_per_1k_output</otherwise>
+        </choose>
+        AS output_price, status, effective_from, published_at
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">model_points_price_version</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_purchase_price_version</otherwise>
+        </choose>
+        WHERE id = #{id}
+    </select>
+
+    <select id="listPrices" resultType="com.felix.aigatecore.catalog.CatalogPriceDO">
+        SELECT id,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">logical_model_id</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_id</otherwise>
+        </choose>
+        AS owner_id, revision,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">NULL</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>currency</otherwise>
+        </choose>
+        AS currency,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">point_per_1k_input</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>amount_per_1k_input</otherwise>
+        </choose>
+        AS input_price,
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">point_per_1k_output</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>amount_per_1k_output</otherwise>
+        </choose>
+        AS output_price, status, effective_from, published_at
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">model_points_price_version</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_purchase_price_version</otherwise>
+        </choose>
+        WHERE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">logical_model_id</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_id</otherwise>
+        </choose>
+        = #{ownerId}
+        ORDER BY revision
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPrices" resultType="long">
+        SELECT COUNT(*)
+        FROM
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">model_points_price_version</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_purchase_price_version</otherwise>
+        </choose>
+        WHERE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">logical_model_id</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_id</otherwise>
+        </choose>
+        = #{ownerId}
+    </select>
+
+    <insert id="insertPrice" useGeneratedKeys="true" keyProperty="id">
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">INSERT INTO model_points_price_version(logical_model_id, revision, point_per_1k_input, point_per_1k_output, created_by, created_at)
+            VALUES(#{ownerId}, #{revision}, #{inputPrice}, #{outputPrice}, #{actorId}, #{now})</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>INSERT INTO deployment_purchase_price_version(deployment_id, revision, currency, amount_per_1k_input, amount_per_1k_output, created_by, created_at)
+            VALUES(#{ownerId}, #{revision}, #{currency}, #{inputPrice}, #{outputPrice}, #{actorId},
+            #{now})</otherwise>
+        </choose>
+    </insert>
+
+    <update id="publishPrice">
+        UPDATE
+        <choose>
+            <!--suppress XmlUnresolvedReference -->
+            <when test="points">model_points_price_version</when>
+            <!--suppress XmlUnresolvedReference -->
+            <otherwise>deployment_purchase_price_version</otherwise>
+        </choose>
+        SET status='PUBLISHED', effective_from = #{now}, published_at = #{now}, published_by = #{actorId}
+        WHERE id = #{id} AND status='DRAFT'
+    </update>
+
+    <update id="pointPricePointer">
+        UPDATE logical_model
+        SET active_points_price_version_id = #{priceId}, version=version+1, updated_at = #{now}
+        WHERE id = #{ownerId} AND version = #{expectedVersion}
+    </update>
+
+    <update id="purchasePricePointer">
+        UPDATE model_deployment
+        SET active_purchase_price_version_id = #{priceId}, version=version+1, updated_at = #{now}
+        WHERE id = #{ownerId} AND version = #{expectedVersion}
+    </update>
+
+    <select id="selectReceipt" resultType="com.felix.aigatecore.catalog.ProviderCredentialDO">
+        SELECT id, deployment_id, credential_kind, encrypted_secret, iv, encryption_key_id, credential_revision,
+        issued_by_employee_id, issue_idempotency_key, issue_request_hmac, issue_hmac_key_id, status, created_at,
+        rotated_at, revoked_at
+        FROM provider_credential
+        WHERE issued_by_employee_id = #{actorId} AND issue_idempotency_key = #{key} FOR UPDATE
+    </select>
+
+    <insert id="insertCredential" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO provider_credential(deployment_id, credential_kind, encrypted_secret, iv, encryption_key_id,
+        credential_revision, issued_by_employee_id, issue_idempotency_key, issue_request_hmac, issue_hmac_key_id,
+        status, created_at, rotated_at)
+        VALUES(#{deploymentId}, #{kind}, #{encryptedSecret}, #{iv}, #{encryptionKeyId}, #{revision}, #{actorId},
+        #{key}, #{hmac}, #{hmacKeyId}, 'ACTIVE', #{now}, #{rotatedAt})
+    </insert>
+
+    <update id="credentialPointer">
+        UPDATE model_deployment
+        SET active_credential_id = #{credentialId}, version=version+1, updated_at = #{now}
+        WHERE id = #{deploymentId}
+    </update>
+
+    <update id="revokeCredential">
+        UPDATE provider_credential
+        SET status='REVOKED', revoked_at = #{now}
+        WHERE id = #{id} AND status='ACTIVE'
+    </update>
+
+    <update id="clearCredentialPointer">
+        UPDATE model_deployment
+        SET active_credential_id=NULL, status='DISABLED', version=version+1, updated_at = #{now}
+        WHERE id = #{deploymentId} AND active_credential_id = #{id}
+    </update>
+
+    <select id="listCredentials" resultType="com.felix.aigatecore.catalog.ProviderCredentialDO">
+        SELECT id, deployment_id, credential_kind, encrypted_secret, iv, encryption_key_id, credential_revision,
+        issued_by_employee_id, issue_idempotency_key, issue_request_hmac, issue_hmac_key_id, status, created_at,
+        rotated_at, revoked_at
+        FROM provider_credential
+        WHERE deployment_id = #{deploymentId}
+        ORDER BY id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countCredentials" resultType="long">
+        SELECT COUNT(*)
+        FROM provider_credential
+        WHERE deployment_id = #{deploymentId}
+    </select>
+
+    <select id="selectPermission" resultType="com.aigate.contracts.dto.AgentModelPermissionDTO">
+        SELECT agent_id, logical_model_id AS model_id, status, version, granted_at, revoked_at
+        FROM agent_model_permission
+        WHERE agent_id = #{agentId} AND logical_model_id = #{modelId}
+    </select>
+
+    <insert id="grantPermission">
+        INSERT INTO agent_model_permission(agent_id, logical_model_id, status, version, granted_by, granted_at,
+        created_at, updated_at)
+        VALUES(#{agentId}, #{modelId}, 'GRANTED',0, #{actorId}, #{now}, #{now}, #{now})
+        ON DUPLICATE KEY UPDATE status='GRANTED', version=version+1, granted_by = #{actorId}, granted_at = #{now},
+        revoked_by=NULL, revoked_at=NULL, updated_at = #{now}
+    </insert>
+
+    <update id="revokePermission">
+        UPDATE agent_model_permission
+        SET status='REVOKED', version=version+1, revoked_by = #{actorId}, revoked_at = #{now}, updated_at = #{now}
+        WHERE agent_id = #{agentId} AND logical_model_id = #{modelId} AND status='GRANTED'
+    </update>
+
+    <select id="listPermissions" resultType="com.aigate.contracts.dto.AgentModelPermissionDTO">
+        SELECT agent_id, logical_model_id AS model_id, status, version, granted_at, revoked_at
+        FROM agent_model_permission
+        WHERE agent_id = #{agentId}
+        <!--suppress XmlUnresolvedReference -->
+        <if test="status != null">AND status = #{status}</if>
+        ORDER BY id
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPermissions" resultType="long">
+        SELECT COUNT(*)
+        FROM agent_model_permission
+        WHERE agent_id = #{agentId}
+        <!--suppress XmlUnresolvedReference -->
+        <if test="status != null">AND status = #{status}</if>
+    </select>
+</mapper>

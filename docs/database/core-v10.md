@@ -13,6 +13,8 @@
 ## 3. 规范 SQL（5 张新增表，含所需旧表ALTER）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 CREATE TABLE corporate_emergency_pool (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   company_scope_id BIGINT UNSIGNED NOT NULL DEFAULT 1,

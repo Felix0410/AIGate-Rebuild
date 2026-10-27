@@ -28,13 +28,13 @@ class ManagementRouteCatalogTests {
     }
 
     /**
-     * 只有 P1 合同中的三十二个方法组合可以进入代理。
+     * 只有 P1～P3 合同中的五十六个方法组合可以进入代理。
      */
     @Test
-    @DisplayName("只有 P1 合同中的三十二个方法组合可以进入代理。")
+    @DisplayName("只有 P1～P3 合同中的五十六个方法组合可以进入代理。")
     void onlyCurrentPhaseMethodsCanBeForwarded() {
         // 1、检查公开方法数量和合法路径。
-        assertEquals(32, ManagementRouteCatalog.ALL.stream().mapToInt(route -> route.methods().size()).sum());
+        assertEquals(56, ManagementRouteCatalog.ALL.stream().mapToInt(route -> route.methods().size()).sum());
         assertEquals(0, ManagementRouteCatalog.rejection("PATCH", "/api/v1/teams/1"));
 
         // 2、检查不支持的方法返回 405。

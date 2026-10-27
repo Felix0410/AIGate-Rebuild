@@ -1,6 +1,14 @@
 # 内部受信RPC · Gateway↔Core↔FinOps
 
-> 文档性质：**唯一实施合同候选**。所有字段、API、状态、错误、鉴权由Core授权校验，严格遵循[API总约定](../06-api-design.md)。真实HTTP/集成测试NOT RUN。
+> 文档性质：**唯一实施合同候选**。所有字段、API、状态、错误、鉴权由Core授权校验，严格遵循[API总约定](../06-api-design.md)。P3目录检查与P7以后RPC分别按所属阶段验证，实际结果见[Progress](../10-progress.md)。
+
+## P3 目录就绪检查
+
+`GET /internal/v1/catalog/models/{modelCode}/eligibility`，禁止正文和任何 query。必须唯一携带 `X-AIGate-Service-Authorization: Bearer svc_...`、`Authorization: Bearer agk_...`、`X-Employee-Key: empk_...`；由 Core 重新验证 P2 当前双身份、员工/Agent/双方团队状态及 EmployeeAgent ACL，再检查当前 GRANTED AgentModel ACL。未认证401、缺任一ACL403、不存在Model404、Model停用409 INVALID_STATE、数据库/DNS依赖故障503；任何客户端自报身份或审批字段400，不认可 mgt_ 代替运行 Key。
+
+200 精确 DTO：`{modelId,modelCode,agentId,employeeId,pointsPriceVersionId,eligible,deployments,checkedAt}`。deployments 每项仅 `{deploymentId,hostingMode,costModel,capabilityRevision,purchasePriceVersionId,currency}`，按 deploymentId ASC；checkedAt 为UTC微秒时间，缺当前 POINTS价时 pointsPriceVersionId=null。候选要求 Model/Provider/Deployment ACTIVE、有效当前凭证、有效匹配批准、当前端点解析安全、同父PUBLISHED价格；第三方还需当前采购币种价，SELF_HOSTED 的采购版本和currency为null。缺价格/凭证/批准或无合格部署时200 eligible=false、deployments=[]。绝不返回 endpoint、ProviderSecret、原审批文件、Adapter全文或管理角色。
+
+eligible=true 只说明 P3 当前目录条件，不证明 P6 治理、P7资金/容量/Permit已满足。审批过期、Owner/ACL撤销、Provider停用、凭证吊销和DNS结果改变均影响下一次检查；P7的资金事务和真实连接前仍须复查。P3不访问未来表，不打开Provider连接。外部经Gateway访问该路径必须404。
 
 ## 1. P7六类RPC和一次性许可
 

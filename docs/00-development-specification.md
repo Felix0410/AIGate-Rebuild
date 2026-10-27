@@ -1,9 +1,9 @@
 # AIGate-Rebuild 完整开发设计说明书
 
-> 文档版本：1.0（2026-10-23） · 状态：P0 DESIGN_REVIEWED / NOT_FROZEN  
+> 文档版本：1.1（2026-10-26） · 状态：P3 本地验证通过 / 待用户验收
 > 用途：交付给项目负责人、Code Reviewer 和本地执行 AI 的**统一阅读入口**。本说明书将完整业务闭环、应用边界、接口/数据权威、阶段依赖与验收纪律串成一个可以从头阅读的开发合同。详细字段、DDL、请求响应和失败矩阵以所链接的专题规范为唯一权威，不在本页重复维护第二套字段。
 >
-> 重要：设计检查不等于运行通过。Java、Spring Boot、MySQL、Redis、RabbitMQ、Provider 的真实兼容或故障测试尚未执行。P0 未获用户最终冻结批准，P1～P12 均未启动编码。
+> 设计检查不等于运行通过。P1/P2 已有代码和真实本地回归证据；P3 已获用户实施及补齐设计授权，当前状态和最终运行结果见[Progress](./10-progress.md)。Redis、RabbitMQ和真实Provider出站仍在后续Phase，不把本地假配置测试当成生产批准。
 
 ## 1. 建设背景、问题及目标
 
@@ -31,7 +31,7 @@ AIGate 提供统一 Chat JSON/SSE 入口，把 Employee 与 Agent 双身份、Lo
 | P11 | RabbitMQ | 至少一次异步传递 Core 已提交的事实 | 不提供跨数据库事务 |
 | P11 | aigate-finops + finops_db | Inbox、事实读模型、聚合、源 Manifest、受控运营成本 | 不修改 Core 额度和真实财务操作 |
 
-目前选择 Java21、Spring Boot4.1.1、Spring Cloud Gateway Server WebMVC、Spring MVC/Core、MyBatis-Plus、MySQL8.4、Flyway、Redis8.4 与 RabbitMQ。**这些是待兼容 PoC 核验的设计基线，不是已经运行通过的版本组合。** 早期就拆 Gateway/Core，是基于公开网络长连接与内部权限/资金信任边界，而不是按 CRUD 域拆出很多微服务；P11 再因只读分析隔离而增加 FinOps。选择原因、替代方案和代价见[架构说明](./03-architecture.md)与[ADR](./adr/README.md)。
+目前选择 Java21、Spring Boot4.1.1、Spring Cloud Gateway Server WebMVC、Spring MVC/Core、MyBatis-Plus、MySQL8.4、Flyway、Redis8.4 与 RabbitMQ。**当前 Java21/Boot4.1.1/Cloud2025.1.3/MyBatis-Plus3.5.17/MySQL8.4 组合已有本地实测；Redis/RabbitMQ/Provider按所属阶段验证。** 早期就拆 Gateway/Core，是基于公开网络长连接与内部权限/资金信任边界，而不是按 CRUD 域拆出很多微服务；P11 再因只读分析隔离而增加 FinOps。选择原因、替代方案和代价见[架构说明](./03-architecture.md)与[ADR](./adr/README.md)。
 
 ## 4. 领域对象及持久化划分
 

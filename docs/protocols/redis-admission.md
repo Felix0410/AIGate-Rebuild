@@ -19,7 +19,7 @@ P7仅NORMAL，P9新增LOW，P10获批准EMERGENCY 4:2:1公平授位、不抢占�
 
 | 名称（同一hash tag） | Redis类型 | 内容/用途 |
 |---|---|---|
-| `guard` | HASH | `admissionEpoch`（Core DB代次）、`redisRunId`（Redis实际运行代次）、`state=OPEN|RECOVERING|BLOCKED`、`policyVersion`、`openedAtMs`；Guard缺失或不匹配一律拒新准入 |
+| `guard` | HASH | `admissionEpoch`（Core DB代次）、`redisRunId`（Redis实际运行代次）、`state=OPEN\|RECOVERING\|BLOCKED`、`policyVersion`、`openedAtMs`；Guard缺失或不匹配一律拒新准入 |
 | `seq` | STRING counter | 同Pool单调 WAITING序号，只由Lua INCR，64位上界前要重建受控epoch |
 | `wait:NORMAL`,`wait:LOW`,`wait:EMERGENCY` | ZSET | member=opaque ticketId；score=本epoch递增seq，分档FIFO；P7只准NORMAL |
 | `ticket` | HASH（受限小条目） | `ticketId→invocationId,ownerId,serviceClass,queueDeadlineMs,createdAtMs`，不含原文与Key |

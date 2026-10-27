@@ -13,6 +13,8 @@ TeamPool/Grant/发行幂等与审计理由；Grant到期、撤销不退已发Poo
 ## 3. 规范 SQL（3 张新增表）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 CREATE TABLE team_pool (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   team_id BIGINT UNSIGNED NOT NULL,

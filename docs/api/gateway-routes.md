@@ -1,6 +1,6 @@
 # Gateway · 精确方法与路径白名单
 
-> 文档性质：**唯一实施合同候选**。所有字段、API、状态、错误、鉴权由Core授权校验，严格遵循[API总约定](../06-api-design.md)。真实HTTP/集成测试NOT RUN。
+> 文档性质：**唯一实施合同候选**。所有字段、API、状态、错误、鉴权由Core授权校验，严格遵循[API总约定](../06-api-design.md)。P1～P3公开方法总数56，当前真实测试结论见[Progress](../10-progress.md)。
 
 ## 1. 外部路由注册规则
 
@@ -27,7 +27,7 @@
 **实现规则**：
 - 本表使用了前缀继承省略写法（例如 P2 第一个资源为 /api/v1/agents，后面的 /{agentId}/keys 在此前缀下），落地为 Gateway RouteDefinition 时必须**展开为明确合法路径+HTTP method**，而不是拿本表的文字直接作为PathPredicate或把所有子路径 /** 放行。执行AI只能实现当前Phase已经存在的端点；新增一个API要同步 Gateway routes、Core Controller、授权测试和本清单。
 - 除网关自己的受限 Actuator readiness/liveness 外，任何 /internal/**、URL编码变体、路径规范化后包含 traversal、/actuator/env 等都不对客户端开放。Gateway卸除伪造 X-AIGate-Service-* / X-Internal-* / X-Employee-Id / Forwarded 等，内部svc_只由受信HttpClient为自身RPC添加；运行时不能用mgt_取代agk_/empk_。
-- P1就进行一次真正的网络双应用转发，其余Phase增加显式配置；Core内部 /internal/v1/ping（P1）、/runtime-identities/verify（P2）、/catalog/models/{modelCode}/eligibility（P3）、六类Invocation RPC（P7，见[内部RPC](./internal-rpc.md)）、FinOps私有source-manifest/source-event（P11）**不属于Gateway公开路由**，即使它们真实运行并返回200，公开请求也应404/403。
+- P1就进行一次真正的网络双应用转发，其余Phase增加显式配置；Core内部 /internal/v1/ping（P1）、/runtime-identities/verify（P2）、GET /catalog/models/{modelCode}/eligibility（P3；请求响应见[内部RPC](./internal-rpc.md#p3-目录就绪检查)）、六类Invocation RPC（P7，见[内部RPC](./internal-rpc.md)）、FinOps私有source-manifest/source-event（P11）**不属于Gateway公开路由**，即使它们真实运行并返回200，公开请求也应404/403。
 - Router不能无条件转发客户端 Authorization mgt_ 给FinOps；P11进入FinOps的是Core验证后的业务主体/TypedScope，原 mgt_仍只在 Gateway→Core上被验证。
 - Gateway管理POST/PATCH/PUT/DELETE绝不自动业务重试。外部504可能意味着Core已COMMIT，只有同业务幂等ID的安全查询或有明确重复收据的无敏感重放才可继续；特别是首次管理Key不重新显示。
 - 公开错误JSON按[API总则](../06-api-design.md)使用 {error:{code,message,requestId,retryable}}；内部RPC按[Canonical协议](../protocols/runtime-canonical.md)的P7 v1/P9 v2/P10 v3协商版本，不可永远锁定在v1。**P1两个Bootstrap端点使用bst_，不是管理mgt_的替代角色**。

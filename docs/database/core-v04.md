@@ -13,6 +13,8 @@ Quota、采购月总预算和分区、账务预留/Ledger/Outbox全部在Core同
 ## 3. 规范 SQL（10 张新增表）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 CREATE TABLE quota_policy (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   scope_type VARCHAR(24) NOT NULL,

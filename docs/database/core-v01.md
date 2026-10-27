@@ -1,6 +1,6 @@
 # Core V01 · V1__core_identity.sql
 
-> 实施时点：P1；本页为**设计SQL基准**，尚未经过MySQL8.4/Flyway实测。实际迁移文件由本地AI创建。已运行版本禁止原地编辑。
+> 实施时点：P1；本页为规范SQL基准。Core V1～V3已在2026-10-26通过真实MySQL8.4/Flyway干净迁移、历史升级和重启验证，详见[Progress](../10-progress.md)。已运行迁移禁止原地编辑。
 
 ## 1. 目的与实施范围
 
@@ -138,6 +138,6 @@ VALUES (1,NULL,NULL,0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6));
 - 先执行真实MySQL8.4/Flyway新库迁移，再执行上一版本真实历史升级，记录`schema_history`与checksum。
 - 使用应用账户验证不能执行DDL；检查业务数据并发和外键拒绝情形。
 - 仅本Phase上线后才可以访问对应管理API与受信内部RPC。
-- 本规范只证明设计选择已明确，**真实测试状态NOT RUN**。
+- 本规范的SQL结构已有本地真实验证；具体命令、覆盖范围及限制见Progress，未来版本仍按阶段单独实测。
 
 参照 [数据库目录](../05-database-design.md)、[所属模块](../phases/README.md)、[验收](../09-test-plan.md)。

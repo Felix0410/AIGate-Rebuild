@@ -13,6 +13,8 @@
 ## 3. 规范 SQL（7 张新增表，含所需旧表ALTER）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 ALTER TABLE role_assignment
   DROP CHECK ck_role_kind,
   DROP CHECK ck_role_scope;

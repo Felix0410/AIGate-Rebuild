@@ -105,7 +105,7 @@ class RuntimeIdentityIT extends AbstractIdentityIntegrationTest {
 
             // 2、升级到 V2，再用旧 mgt_ 读取原来的员工和团队。
             stop(core);
-            startCore("OFF", Map.of("AIGATE_DB_URL", url));
+            startCore("OFF", Map.of("AIGATE_DB_URL", url, "SPRING_FLYWAY_TARGET", "2"));
             expect(call("GET", "/api/v1/me/profile", legacyAdmin.key(), null), 200);
             assertEquals("Existing V1", expect(call("GET", "/api/v1/teams/" + team, legacyAdmin.key(), null), 200)
                 .get("name").asString());

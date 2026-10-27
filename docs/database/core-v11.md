@@ -13,6 +13,8 @@ P12全局持久化准入单例，状态初始BLOCKED；兼容ALTER旧V1管理审
 ## 3. 规范 SQL（1 张新增表，含所需旧表ALTER）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 -- Core V11__runtime_admission_control.sql DESIGN BASELINE
 CREATE TABLE runtime_admission_control (
   id TINYINT UNSIGNED NOT NULL,

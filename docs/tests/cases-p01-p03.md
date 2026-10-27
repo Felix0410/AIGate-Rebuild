@@ -112,14 +112,14 @@
 | P3-05 | TeamManager/普通员工尝试 Provider CRUD | 403，无法绕过 Gateway |
 | P3-06 | Provider DISABLED 后尝试激活其 Deployment | 409，无可用候选 |
 | P3-07 | Admin 建 TEXT-Q4-STABLE、能力/版本合法 | 唯一 modelCode、身份不可暗换 |
-| P3-08 | 试图将已发布 modelCode 改指完全不同型号 | 409，必须新建 LogicalModel |
+| P3-08 | 试图通过 PATCH 改 modelCode/family/revision/capabilityProfile | 400，必须新建 LogicalModel |
 | P3-09 | LogicalModel DISABLED，但 AgentModel ACL 仍 GRANTED | eligibility 拒绝；权限关系不代表可执行 |
 | P3-10 | 两 Admin 同 expectedVersion 修改同对象 | 仅一成功、另一409，无丢更新 |
 | P3-11 | 两个确实同型号版本部署分别 THIRD_PARTY_API/SELF_HOSTED | 共享 Model 身份/员工 POINTS 价，但 hosting/cost_model 独立 |
 | P3-12 | 不同模型仅都是 OpenAI-compatible | 不得合并为同一 LogicalModel |
 | P3-13 | 非法 Endpoint schema http/file/gopher（第三方） | 400，记录安全拒绝，无 HTTP 出站 |
 | P3-14 | 外部 Host 解析到 127.0.0.1、link-local 或云元数据地址 | SSRF 拒绝，不能读取内部资源 |
-| P3-15 | DNS 重绑定与 302 重定向至内网 | 出站校验/实际目标连接保护失败关闭 |
+| P3-15 | DNS 从公网变私网、候选端点声称可302跳转 | P3每次登记/激活/eligibility重新校验全部解析结果且HTTP计数0；P7真实连接与302保护另行实测，不能冒充P3已完成真实派发保护 |
 | P3-16 | SELF_HOSTED endpoint 私网但未 allowlist/审批 | 不参与 P7 候选；不默认 CONFIDENTIAL |
 | P3-17 | Deployment DRAFT→ACTIVE、MAINTENANCE/禁用 | 仅有效发布资源能列为候选，变更有审计 |
 | P3-18 | THIRD_PARTY_API 却 cost_model=INTERNAL_RESOURCE | 400/DB CHECK 拒绝 |
@@ -140,7 +140,7 @@
 
 **新增兼容/端点安全门禁**：测试 Docker/JVM 不从外网任意访问主机地址，Provider 凭证回显/trace/metrics 绝无敏感值；模拟不受支持 cache/附加收费类别不允许 P7 出站。P3 不测试 P8 真实加权路由/熔断；P7 才通过 Permit 执行 Provider。固定单价、业务日期、URL、Host/IP 以及具体 MySQL fixture 仍需 P0 进一步冻结。
 
-**状态**：P3-01～32、SYS-03 全部 NOT RUN；测试矩阵不是测试通过证明。
+**状态**：P3 本地实现与测试已通过，具体案例映射见target/p3-delivery.json，整体签收与限制见Progress；矩阵不是测试通过证明。
 
 
 
@@ -187,3 +187,20 @@
 ## 完成条件
 
 异常输入/越权/幂等/账务竞态/超时/重启不得仅用模拟UnitTest代替必要真实MySQL/Redis/MQ/两进程E2E。未实际运行前一律NOT_RUN；原草案描述中的阶段归属若与[Roadmap](../08-roadmap.md)有差异，以Roadmap和最新Database/API规范为准。
+
+
+## P3 合同闭合专项测试
+
+| ID | 输入/故障 | 精确断言 |
+|---|---|---|
+| P3-33 | 创建请求偷带deploymentId、缺Adapter字段/未知字段 | 400；合法请求的持久ID由Core回填并匹配新行 |
+| P3-34 | 管理请求自报 evidenceRef/verifiedAt 或私网批准、清单缺失 | DRAFT可登记，ACTIVE/NONE签发拒绝；不能凭自报字段成为可信审批 |
+| P3-35 | 受保护清单摘要匹配/不匹配、过期、allowNoAuth及重启撤回 | 只接受精确配置；失效后下一次eligibility无候选；NONE限已批准SELF_HOSTED |
+| P3-36 | Manifest未知字段、重复摘要、非法时间/文件权限或符号链接 | 启动失败且不输出文件原文 |
+| P3-37 | AES-GCM 4096字节/4097字节、多字节、空白保留、随机IV、篡改tag/AAD/keyId | 合法可真实解密，超长/错误拒绝，库中只有ciphertext/IV/keyId |
+| P3-38 | 同Actor幂等并发、跨deployment/revision/secret/存在性冲突、响应丢失 | 一条凭证/一次审计；重放200原metadata、不加密或改指针；冲突409 |
+| P3-39 | 当前及历史AES/Issue密钥配置复用、缺失/部分配置、轮换追验 | 启动拒绝坏配置；合法历史可解密/重放；未知历史keyId安全失败，无新签发 |
+| P3-40 | 未授权双ACL、mgt_混用、伪造body/重复头、公开internal路径 | 401/403/400/404按RPC合同，DTO只含白名单 |
+| P3-41 | Provider策略更新使ACTIVE部署或摘要失效 | 409 HOST_POLICY_CONFLICT，旧配置/版本/审计不变 |
+| P3-42 | 审计故障时创建/发布/签发/吊销/ACL撤销 | 同事务整体回滚，不出现虚假成功或残留指针 |
+| P3-43 | P1/P2全量、V3干净迁移/历史升级、双JVM/Compose | 汇总实际pass/fail/skip、环境和Git基线；外部CI未运行不得声称PASS |

@@ -13,6 +13,8 @@ Invocation/DispatchPermit/Report/风险案/CapacityPool五表，包含RequestHMA
 ## 3. 规范 SQL（5 张新增表，含所需旧表ALTER）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 CREATE TABLE capacity_pool_policy (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   pool_code VARCHAR(96) COLLATE utf8mb4_bin NOT NULL,

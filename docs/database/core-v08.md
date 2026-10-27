@@ -13,6 +13,8 @@ RoutingPolicy和Health状态两表；补旧Deployment真实健康检查字段。
 ## 3. 规范 SQL（2 张新增表，含所需旧表ALTER）
 
 ```sql
+-- 本代码块为增量 DDL，跨版本表定义见前置版本。
+-- noinspection SqlResolveForFile
 CREATE TABLE routing_policy_revision (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   logical_model_id BIGINT UNSIGNED NOT NULL,

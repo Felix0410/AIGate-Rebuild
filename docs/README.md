@@ -1,14 +1,14 @@
 # AIGate-Rebuild · 技术与开发文档
 
-> **文档体系版本：v1.0 · 2026-10-23**  
-> **当前状态：P0 详细设计重组完成候选，待用户正式冻结；P1～P12 尚未启动。**  
-> 本仓库的正式文档以**业务主题和模块**组织，不再按聊天/设计日期逐段追加。**P0由用户在IntelliJ IDEA亲手创建工程并完成PoC，总控逐步教学；P1～P12源码、Flyway、Redis Lua与自动化测试由本地AI按完整Phase合同实施。**设计和文档始终由总控维护。
+> **文档体系版本：v1.1 · 2026-10-26**
+> **当前状态：P1/P2 已实现并提交；用户已启动 P3 并授权补齐设计，P3 已完成实现和本地验证、待用户验收，结果见 [Progress](./10-progress.md)。**
+> 本仓库的正式文档以**业务主题和模块**组织，不再按聊天/设计日期逐段追加。**P0由用户在IntelliJ IDEA亲手创建工程并完成PoC，总控逐步教学；P1～P12源码、Flyway、Redis Lua与自动化测试由本地AI按完整Phase合同实施。**默认设计和文档由总控维护；本次 P3 用户已明确授权执行者补齐设计并同步文档。
 
 ## 一、从哪里开始
 
-**P0当前操作步骤**：[IDEA手把手克隆仓库、配JDK、搭Maven双模块与真实验证](./guides/p00-idea-hands-on.md)。**统一开发执行流程**：[Phase开发、任务下发、Git Review、知识讲解和用户签收](./13-collaboration.md#7-实际开发工作流唯一执行闭环)；当前P0由你亲手完成，不交给本地AI；P1～P12默认一个Phase一次完整交付，避免机械拆分。
+**首次搭建工程步骤**：[IDEA手把手克隆仓库、配JDK、搭Maven双模块与真实验证](./guides/p00-idea-hands-on.md)。**统一开发执行流程**：[Phase开发、任务下发、Git Review、知识讲解和用户签收](./13-collaboration.md#7-实际开发工作流唯一执行闭环)；P0由用户亲手完成；P1～P12默认一个Phase一次完整交付，避免机械拆分。
 
-**当前P0技术入口**：[Java21/Boot4/Cloud Gateway/MyBatis/MySQL/Flyway兼容性矩阵与本地AI PoC执行合同](./tests/p00-technology-compatibility.md)，静态核对已完成，真实PoC待执行。
+**P0技术基线入口**：[Java21/Boot4/Cloud Gateway/MyBatis/MySQL/Flyway兼容性矩阵与本地AI PoC执行合同](./tests/p00-technology-compatibility.md)，原始兼容合同保留，当前构建、数据库及双JVM实测以 Progress 为准。
 
 [全部文件清单与逐份审查结果](./document-inventory.md)列出每一份文档、命名规则、修订内容和仍未完成的工程验证门禁。
 

@@ -14,6 +14,7 @@
 | [ADR-029](./ADR-029.md) | 供应商可信Usage与费用硬上界 | 适用架构/阶段 |
 | [ADR-030](./ADR-030.md) | Redis容量池共享Lua与Epoch恢复 | 适用架构/阶段 |
 | [ADR-031](./ADR-031.md) | Core Outbox+RabbitMQ+FinOps Inbox与双Build | 适用架构/阶段 |
+| [ADR-033](./ADR-033.md) | P3服务端ID、受保护目录批准清单与私有就绪检查 | P3，保持P6/P7边界 |
 | [ADR-032](./ADR-032.md) | Core MySQL全局阻断与Readiness证据 | 适用架构/阶段 |
 
 所有ADR严格包含背景、问题、候选、最终选择、理由、优点、缺点和对未来的影响。状态“设计已选定”**不等于用户P0 FROZEN或兼容PoC PASS**。

@@ -78,3 +78,13 @@ P1仅前两应用；P11才部署第三个应用。按业务出现真实问题再
 - 哪些状态属于MySQL权威、Redis短期协调、FinOps可重建视图？不能把缓存/消息当已经消费的结算事实。
 - 何时允许增加一个服务？必须有当前压力/安全/独立生命周期证据和失败恢复方案，不能机械按表或Controller拆分。
 - 改动Header、HMAC版本、数据库DDL、路由Method或审批范围，哪些消费者/回归必须同步？对照[ADR](./adr/README.md)、[测试](./09-test-plan.md)执行。
+
+
+## 当前实现边界（P3）
+
+- 已运行 Gateway/Core 两个独立应用，Core V1～V3共17张业务表；Gateway依赖只含HTTP/契约，不引入JDBC/MyBatis/Flyway/MySQL或Core实现。
+- P3新增24个精确公开管理方法组合，总56个；内部 GET catalog eligibility 仍只可由受信服务携带真实双Key访问。
+- Catalog管理输入是候选配置，独立安全运维的受保护Manifest才提供精确技术批准。该文件启动加载、绝对时间截止、撤回重启；它不代表P6数据治理或P7财务出站许可。字段权威见[API](./api/p01-p03.md#p3-实施闭合合同2026-10-26)，取舍见[ADR-033](./adr/ADR-033.md)。
+- ProviderSecret与签发收据分别使用独立AES-GCM/HMAC材料，只有Core持有当前/历史版本；公开DTO始终无秘密、密文及IV。
+- 目录检查只进行有界DNS解析，不创建Provider连接。P7必须补真实连接地址固定、重定向/代理控制及Permit约束；JDK/操作系统DNS缓存可能延迟外部变更观测，P3不承诺物理连接级DNS防护已经完成。
+- 技术债：管理写沿用P1单例协调锁，正确性优先但写入串行；尚无吞吐压测、KMS托管或生产供应商证据。此处不自动推进后续Phase。

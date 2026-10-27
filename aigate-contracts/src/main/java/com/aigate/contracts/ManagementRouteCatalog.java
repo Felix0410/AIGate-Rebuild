@@ -61,7 +61,21 @@ public final class ManagementRouteCatalog {
         new Route("/api/v1/employees/{employeeId}/runtime-credentials/{credentialId}", Set.of("DELETE")),
         new Route("/api/v1/employees/{employeeId}/runtime-credentials/{credentialId}/rotate", Set.of("POST")),
         new Route("/api/v1/agents/{agentId}/employees", Set.of("GET")),
-        new Route("/api/v1/agents/{agentId}/employees/{employeeId}", Set.of("PUT", "DELETE")));
+        new Route("/api/v1/agents/{agentId}/employees/{employeeId}", Set.of("PUT", "DELETE")),
+        new Route("/api/v1/providers", Set.of("GET", "POST")),
+        new Route("/api/v1/providers/{providerId}", Set.of("GET", "PATCH")),
+        new Route("/api/v1/models", Set.of("GET", "POST")),
+        new Route("/api/v1/models/{modelId}", Set.of("GET", "PATCH")),
+        new Route("/api/v1/models/{modelId}/deployments", Set.of("GET", "POST")),
+        new Route("/api/v1/deployments/{deploymentId}", Set.of("GET", "PATCH")),
+        new Route("/api/v1/models/{modelId}/points-prices", Set.of("GET", "POST")),
+        new Route("/api/v1/models/{modelId}/points-prices/{revision}/publish", Set.of("POST")),
+        new Route("/api/v1/deployments/{deploymentId}/purchase-prices", Set.of("GET", "POST")),
+        new Route("/api/v1/deployments/{deploymentId}/purchase-prices/{revision}/publish", Set.of("POST")),
+        new Route("/api/v1/deployments/{deploymentId}/credentials", Set.of("GET", "POST")),
+        new Route("/api/v1/deployments/{deploymentId}/credentials/{credentialId}", Set.of("DELETE")),
+        new Route("/api/v1/agents/{agentId}/models", Set.of("GET")),
+        new Route("/api/v1/agents/{agentId}/models/{modelId}", Set.of("PUT", "DELETE")));
 
     /**
      * 识别编码路径、路径穿越和分号等可能绕过白名单的路径形式。

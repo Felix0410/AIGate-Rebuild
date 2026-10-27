@@ -1,6 +1,6 @@
 # AIGate-Rebuild · 正式开发文档完整清单与复核记录
 
-> 基准日期：2026-10-23；文档状态：P0 DESIGN_REVIEWED / NOT_FROZEN。此清单覆盖GitHub当前所有Markdown文档；表中“内容用途明确”是**静态审查结果**，不能替代Java/MySQL/Redis/RabbitMQ/Provider工程实测。
+> 原始静态审查基准：2026-10-23；2026-10-26新增ADR-033并同步P3合同，当前工程状态见[Progress](./10-progress.md)。此清单覆盖GitHub当前所有Markdown文档；表中“内容用途明确”是**静态审查结果**，不能替代Java/MySQL/Redis/RabbitMQ/Provider工程实测。
 
 ## 1. 审查原则与结果
 
@@ -68,6 +68,7 @@
 | [`docs/adr/ADR-030.md`](./adr/ADR-030.md) | Redis容量Pool共享Lua及runId/epoch恢复 | 文档静态核对；待相应Phase真实验证 |
 | [`docs/adr/ADR-031.md`](./adr/ADR-031.md) | Outbox/RabbitMQ/Inbox/Manifest双Build | 文档静态核对；待相应Phase真实验证 |
 | [`docs/adr/ADR-032.md`](./adr/ADR-032.md) | Core MySQL全局Block与Readiness证据 | 文档静态核对；待相应Phase真实验证 |
+| [`docs/adr/ADR-033.md`](./adr/ADR-033.md) | P3服务端ID、受保护批准清单及私有就绪边界 | 用户授权设计；实际验证见Progress |
 | [`docs/adr/README.md`](./adr/README.md) | 有效ADR索引、状态与历史编号约定 | 文档静态核对；待相应Phase真实验证 |
 
 ### API接口合同（5份）
@@ -156,7 +157,7 @@ P0～P12各有一份，另设模块总索引。
 | [`docs/tests/p00-technology-compatibility.md`](./tests/p00-technology-compatibility.md) | P0官方版本兼容矩阵、唯一Starter清单及COMP01～10真实PoC执行合同 | 官方文档静态核对；构建与运行待验证 |
 | [`docs/tests/design-audit-regressions.md`](./tests/design-audit-regressions.md) | P0审查修订涉及的跨Phase回归案例 | 文档静态核对；待相应Phase真实验证 |
 
-本次重新核验后的仓库共有 **73份Markdown文件**（原70份经重命名与内容修订，新增清单、P0技术审查、IDEA操作指南3份），上述八组分别为17、12、5、12、14、7、1、5，合计73。
+本次重新核验后的仓库截至2026-10-23共有 **73份Markdown文件**（原70份经重命名与内容修订，新增清单、P0技术审查、IDEA操作指南3份），上述八组分别为17、12、5、12、14、7、1、5，合计73。2026-10-26新增ADR-033，当前共74份。
 
 ## 4. 全库链接和命名核验结果
 
@@ -164,11 +165,10 @@ P0～P12各有一份，另设模块总索引。
 - 顶层主章节00～13编号各出现一次；Phase p00～p12齐全，数据库core-v01～v11与finops-v01齐全；历史ADR不连续编号有明确保留理由。
 - 历史追加式Dxx/Rxx草稿不在当前树。部分测试caseId仍保留源设计编号以保障用例引用稳定，不表示旧草稿仍为权威。
 
-## 5. 未关闭的正式交付门禁
+## 5. 当前交付门禁
 
-1. P0的Java21/Spring Boot4.1.1/Gateway MVC/MyBatis-Plus/MySQL8.4/Flyway最小PoC与双进程真实安全E2E仍为NOT_RUN；未知兼容问题不能假装解决。
-2. P1～P12真实业务源码和单元/集成/故障测试尚未启动；不能凭本清单将任何后续Phase标PASS。
-3. 真正的Provider账单、Tokenizer证据、容量证明、安全规则、区域审批由实际授权业务方提供；缺失时应安全拒绝，而不是由AI补造。
-4. 后续实施发现精确字段/唯一约束、API/Protocol、测试互相矛盾时，由总控改正式文档和必要ADR，执行AI不得擅自设计；发现后复核此目录并更新[Progress](./10-progress.md)。
+当前P1/P2已提交，P3实现和本地验证按[Progress](./10-progress.md)记录；上文2026-10-23的NOT_RUN为当时静态审查历史，不覆盖当前真实测试。
 
-当前审查得到的是**文本层可用于P0最终审查的设计体系**，并非所有中间件与业务功能已经通过工程验收。
+1. P3须通过最终全量回归、IDEA错误检查、Code Review与用户验收，之后才可启动下一阶段。
+2. Redis、RabbitMQ、真实Provider网络连接/账单、Tokenizer生产证据、容量和P6数据出境批准按未来阶段实测，不能用P3假配置替代。
+3. 后续发现字段/约束/API/协议冲突，按用户授权范围同步唯一权威，保持迁移历史不可改写。
