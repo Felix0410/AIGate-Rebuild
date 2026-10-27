@@ -77,7 +77,7 @@ class CatalogMigrationIT extends AbstractIdentityIntegrationTest {
 
             // 2、去除 Flyway target 限制后升级到 V3，原管理身份、资源及双运行身份仍然有效。
             stop(core);
-            startCore("OFF", Map.of("AIGATE_DB_URL", url));
+            startCore("OFF", Map.of("AIGATE_DB_URL", url, "SPRING_FLYWAY_TARGET", "3"));
             expect(call("GET", "/api/v1/me/profile", admin.key(), null), 200);
             assertEquals(agent, expect(call("GET", "/api/v1/agents/" + agentId, admin.key(), null), 200));
             var identity = expect(request(corePort, "POST", "/internal/v1/runtime-identities/verify", agentKey,
@@ -92,7 +92,7 @@ class CatalogMigrationIT extends AbstractIdentityIntegrationTest {
 
             // 3、再次启动不重复执行迁移，既有成功版本的校验和保持完全一致。
             stop(core);
-            startCore("OFF", Map.of("AIGATE_DB_URL", url));
+            startCore("OFF", Map.of("AIGATE_DB_URL", url, "SPRING_FLYWAY_TARGET", "3"));
             assertEquals(upgraded, migrationChecksums(url));
         } finally {
             stop(core);
@@ -111,7 +111,9 @@ class CatalogMigrationIT extends AbstractIdentityIntegrationTest {
         // 1、实际迁移必须逐字来自规范 SQL，不放宽表、外键或 CHECK。
         String design = Files.readString(projectRoot.resolve("docs/database/core-v03.md"));
         String ddl = design.substring(design.indexOf("```sql\n") + 7);
-        ddl = ddl.substring(0, ddl.indexOf("```")).strip();
+        ddl = ddl.substring(0, ddl.indexOf("```")).lines()
+            .filter(line -> !line.stripLeading().startsWith("--")).collect(java.util.stream.Collectors.joining("\n"))
+            .strip();
         assertEquals(ddl, Files.readString(projectRoot.resolve(
             "aigate-core/src/main/resources/db/migration/V3__catalog.sql")).strip());
         for (String table : List.of("provider", "logical_model", "model_deployment", "model_points_price_version",

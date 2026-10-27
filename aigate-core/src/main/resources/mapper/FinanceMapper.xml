@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.felix.aigatecore.finance.FinanceMapper">
+    <select id="shareIdentityControl" resultType="java.lang.Long">
+        SELECT id FROM bootstrap_control WHERE id=1 FOR SHARE
+    </select>
+    <select id="lockEmployee" resultType="java.lang.Long">
+        SELECT id FROM employee WHERE id=#{id} AND status='ACTIVE' FOR UPDATE
+    </select>
+    <select id="findPolicy" resultType="com.felix.aigatecore.finance.FinanceRows$Policy">
+        SELECT * FROM quota_policy WHERE id=#{id}
+    </select>
+    <select id="lockPolicy" resultType="com.felix.aigatecore.finance.FinanceRows$Policy">
+        SELECT * FROM quota_policy WHERE id=#{id} FOR UPDATE
+    </select>
+    <select id="nextRevision" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(revision),0)+1 FROM quota_policy WHERE scope_type=#{scopeType} AND scope_id=#{scopeId}
+    </select>
+    <insert id="insertPolicy" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO
+        quota_policy(scope_type,scope_id,revision,weekly_limit_points,effective_from,status,created_by,created_at,updated_at)
+        VALUES(#{scopeType},#{scopeId},#{revision},#{limit},#{effectiveFrom},'DRAFT',#{actor},#{now},#{now})
+    </insert>
+    <update id="retirePolicies">
+        UPDATE quota_policy SET status='RETIRED',effective_to=#{effectiveFrom},updated_at=#{now} WHERE
+        scope_type=#{scopeType} AND scope_id=#{scopeId} AND status='ACTIVE'
+    </update>
+    <update id="publishPolicy">
+        UPDATE quota_policy SET status='ACTIVE',updated_at=#{now} WHERE id=#{id} AND revision=#{revision} AND
+        status='DRAFT'
+    </update>
+    <select id="activePolicy" resultType="com.felix.aigatecore.finance.FinanceRows$Policy">
+        SELECT * FROM quota_policy WHERE scope_type=#{scopeType} AND scope_id=#{scopeId} AND status IN
+        ('ACTIVE','RETIRED') AND effective_from &lt;= #{at} AND (effective_to IS NULL OR effective_to &gt; #{at}) ORDER
+        BY revision DESC LIMIT 1
+    </select>
+    <select id="latestActivePolicy" resultType="com.felix.aigatecore.finance.FinanceRows$Policy">
+        SELECT * FROM quota_policy WHERE scope_type=#{scopeType} AND scope_id=#{scopeId} AND status='ACTIVE' ORDER BY
+        revision DESC LIMIT 1 FOR UPDATE
+    </select>
+    <select id="listPolicies" resultType="com.felix.aigatecore.finance.FinanceRows$Policy">
+        SELECT * FROM quota_policy
+        <where>
+            <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+            <!--suppress XmlUnresolvedReference -->
+            <if test="scopeType != null"> AND scope_type=#{scopeType} </if>
+            <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+            <!--suppress XmlUnresolvedReference -->
+            <if test="scopeId != null"> AND scope_id=#{scopeId} </if>
+            <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null"> AND status=#{status} </if>
+        </where>
+        ORDER BY id LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countPolicies" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM quota_policy
+        <where>
+            <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+            <!--suppress XmlUnresolvedReference -->
+            <if test="scopeType != null"> AND scope_type=#{scopeType} </if>
+            <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+            <!--suppress XmlUnresolvedReference -->
+            <if test="scopeId != null"> AND scope_id=#{scopeId} </if>
+            <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+            <!--suppress XmlUnresolvedReference -->
+            <if test="status != null"> AND status=#{status} </if>
+        </where>
+    </select>
+    <select id="budget" resultType="com.felix.aigatecore.finance.FinanceRows$Budget">
+        SELECT * FROM provider_spend_budget WHERE company_scope_id=1 AND currency=#{currency} AND period_start=#{start}
+    </select>
+    <select id="lockBudget" resultType="com.felix.aigatecore.finance.FinanceRows$Budget">
+        SELECT * FROM provider_spend_budget WHERE company_scope_id=1 AND currency=#{currency} AND period_start=#{start}
+        FOR UPDATE
+    </select>
+    <select id="lockBudgetId" resultType="com.felix.aigatecore.finance.FinanceRows$Budget">
+        SELECT * FROM provider_spend_budget WHERE id=#{id} FOR UPDATE
+    </select>
+    <insert id="insertBudget" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO
+        provider_spend_budget(company_scope_id,currency,period_start,period_end,limit_amount,created_at,updated_at)
+        VALUES(1,#{currency},#{start},#{end},#{limit},#{now},#{now})
+    </insert>
+    <update id="updateBudgetLimit">
+        UPDATE provider_spend_budget SET limit_amount=#{limit},version=version+1,updated_at=#{now} WHERE id=#{id} AND
+        version=#{version}
+    </update>
+    <select id="partitions" resultType="com.felix.aigatecore.finance.FinanceRows$Partition">
+        SELECT * FROM provider_spend_partition WHERE budget_id=#{id} ORDER BY id
+    </select>
+    <select id="lockPartitions" resultType="com.felix.aigatecore.finance.FinanceRows$Partition">
+        SELECT * FROM provider_spend_partition WHERE budget_id=#{id} ORDER BY id FOR UPDATE
+    </select>
+    <insert id="insertPartition">
+        INSERT INTO provider_spend_partition(budget_id,partition_code,limit_amount,created_at,updated_at)
+        VALUES(#{id},#{code},#{limit},#{now},#{now})
+    </insert>
+    <update id="updatePartitionLimit">
+        UPDATE provider_spend_partition SET limit_amount=#{limit},version=version+1,updated_at=#{now} WHERE id=#{id}
+    </update>
+    <select id="listBudgets" resultType="com.felix.aigatecore.finance.FinanceRows$Budget">
+        SELECT * FROM provider_spend_budget WHERE company_scope_id=1
+        <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+        <!--suppress XmlUnresolvedReference -->
+        <if test="currency != null"> AND currency=#{currency} </if>
+        <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+        <!--suppress XmlUnresolvedReference -->
+        <if test="start != null"> AND period_start=#{start} </if>
+        ORDER BY id LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countBudgets" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM provider_spend_budget WHERE company_scope_id=1
+        <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+        <!--suppress XmlUnresolvedReference -->
+        <if test="currency != null"> AND currency=#{currency} </if>
+        <!-- Map参数键由服务白名单构造，IDE不具备其静态属性定义。 -->
+        <!--suppress XmlUnresolvedReference -->
+        <if test="start != null"> AND period_start=#{start} </if>
+    </select>
+    <select id="bucket" resultType="com.felix.aigatecore.finance.FinanceRows$Bucket">
+        SELECT * FROM quota_bucket WHERE employee_id=#{employee} AND bucket_kind=#{kind} AND agent_scope_id=#{scope} AND
+        period_start=#{start}
+    </select>
+    <insert id="insertBucket" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO
+        quota_bucket(employee_id,bucket_kind,agent_scope_id,period_start,period_end,limit_points,policy_revision,created_at,updated_at)
+        VALUES(#{employee},#{kind},#{scope},#{start},#{end},#{limit},#{revision},#{now},#{now})
+    </insert>
+    <select id="quotaAccounts" resultType="com.felix.aigatecore.finance.FinanceRows$Bucket">
+        SELECT * FROM quota_bucket WHERE employee_id=#{employee} AND period_start=#{start} ORDER BY
+        bucket_kind,agent_scope_id
+    </select>
+    <select id="lockBucketId" resultType="com.felix.aigatecore.finance.FinanceRows$Bucket">
+        SELECT * FROM quota_bucket WHERE id=#{id} FOR UPDATE
+    </select>
+    <update id="changeBucket">
+        UPDATE quota_bucket SET
+        used_points=used_points+#{used},reserved_points=reserved_points+#{reserved},version=version+1,updated_at=#{now}
+        WHERE id=#{id}
+    </update>
+    <update id="changeBudget">
+        UPDATE provider_spend_budget SET
+        settled_amount=settled_amount+#{used},reserved_amount=reserved_amount+#{reserved},risk_state=#{risk},version=version+1,updated_at=#{now}
+        WHERE id=#{id}
+    </update>
+    <update id="changePartition">
+        UPDATE provider_spend_partition SET
+        settled_amount=settled_amount+#{used},reserved_amount=reserved_amount+#{reserved},version=version+1,updated_at=#{now}
+        WHERE id=#{id}
+    </update>
+    <select id="operation" resultType="com.felix.aigatecore.finance.FinanceRows$Operation">
+        SELECT * FROM finance_operation WHERE operation_key=#{key}
+    </select>
+    <select id="lockOperation" resultType="com.felix.aigatecore.finance.FinanceRows$Operation">
+        SELECT * FROM finance_operation WHERE operation_key=#{key} FOR UPDATE
+    </select>
+    <insert id="insertOperation" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO
+        finance_operation(operation_key,employee_id,agent_id,logical_model_id,deployment_id,status,points_price_version_id,provider_price_version_id,currency,employee_team_snapshot_id,employee_week_start,company_period_start,max_input_tokens,max_output_tokens,max_points,max_currency_amount,created_at,updated_at)
+        VALUES(#{key},#{employee},#{agent},#{model},#{deployment},'RESERVED',#{pointsPrice},#{purchasePrice},#{currency},#{team},#{week},#{month},#{input},#{output},#{points},#{amount},#{now},#{now})
+    </insert>
+    <update id="finishOperation">
+        UPDATE finance_operation SET
+        status=#{status},usage_evidence_digest=#{digest},overrun_points=#{overrunPoints},overrun_currency_amount=#{overrunAmount},updated_at=#{now}
+        WHERE id=#{id}
+    </update>
+    <select id="points" resultType="com.felix.aigatecore.finance.FinanceRows$Points">
+        SELECT * FROM points_reservation WHERE finance_operation_id=#{id}
+    </select>
+    <select id="spend" resultType="com.felix.aigatecore.finance.FinanceRows$Spend">
+        SELECT * FROM provider_spend_reservation WHERE finance_operation_id=#{id}
+    </select>
+    <select id="allocations" resultType="com.felix.aigatecore.finance.FinanceRows$Allocation">
+        SELECT * FROM reservation_allocation WHERE points_reservation_id=#{id} ORDER BY priority_order,id
+    </select>
+    <insert id="insertPoints" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO points_reservation(finance_operation_id,reserved_points,state,created_at,updated_at)
+        VALUES(#{operation},#{points},'RESERVED',#{now},#{now})
+    </insert>
+    <insert id="insertAllocation">
+        INSERT INTO
+        reservation_allocation(points_reservation_id,source_type,source_id,priority_order,reserved_points,created_at,updated_at)
+        VALUES(#{reservation},#{kind},#{source},#{priority},#{points},#{now},#{now})
+    </insert>
+    <insert id="insertSpend">
+        INSERT INTO
+        provider_spend_reservation(finance_operation_id,budget_id,partition_id,currency,reserved_amount,state,created_at,updated_at)
+        VALUES(#{operation},#{budget},#{partition},#{currency},#{amount},'RESERVED',#{now},#{now})
+    </insert>
+    <update id="finishPoints">
+        UPDATE points_reservation SET state=#{state},settled_points=#{used},updated_at=#{now} WHERE id=#{id}
+    </update>
+    <update id="finishAllocation">
+        UPDATE reservation_allocation SET settled_points=#{used},released_points=#{released},updated_at=#{now} WHERE
+        id=#{id}
+    </update>
+    <update id="finishSpend">
+        UPDATE provider_spend_reservation SET state=#{state},settled_amount=#{used},updated_at=#{now} WHERE id=#{id}
+    </update>
+    <insert id="insertLedger">
+        INSERT INTO
+        ledger_entry(finance_operation_id,event_kind,source_type,source_id,unit,currency,delta_amount,business_at,operation_event_key,created_at)
+        VALUES(#{operation},#{event},#{sourceType},#{source},#{unit},#{currency},#{delta},#{now},#{key},#{now})
+    </insert>
+    <insert id="insertOutbox">
+        INSERT INTO
+        outbox_event(event_id,business_event_key,aggregate_type,aggregate_id,aggregate_revision,event_type,schema_version,business_at,payload_json,payload_digest,created_at,updated_at)
+        VALUES(#{eventId},#{key},'FINANCE_OPERATION',#{operation},1,'FINANCE_OPERATION_TEST_SETTLED',1,#{now},#{payload},#{digest},#{now},#{now})
+    </insert>
+</mapper>

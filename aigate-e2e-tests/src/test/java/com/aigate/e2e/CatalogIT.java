@@ -1078,7 +1078,7 @@ class CatalogIT extends AbstractIdentityIntegrationTest {
                     404);
                 assertEquals(0, providerRequests.get());
                 assertEquals(0, scalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='core_db' "
-                    + "AND table_name IN ('invocation','dispatch_permit','finance_operation','capacity_pool')"));
+                    + "AND table_name IN ('invocation','dispatch_permit','capacity_pool')"));
             } finally {
                 proxy.stop(0);
                 fakeProvider.stop(0);

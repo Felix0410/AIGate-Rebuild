@@ -273,7 +273,10 @@ abstract class AbstractIdentityIntegrationTest {
         try (Connection db = db();
             var statement = db.createStatement()) {
             statement.execute("SET FOREIGN_KEY_CHECKS=0");
-            for (String table : List.of("admin_audit_event", "management_credential", "role_assignment",
+            for (String table : List.of("outbox_event", "ledger_entry", "provider_spend_reservation",
+                "reservation_allocation",
+                "points_reservation", "finance_operation", "provider_spend_partition", "provider_spend_budget",
+                "quota_bucket", "quota_policy", "admin_audit_event", "management_credential", "role_assignment",
                 "agent_model_permission", "provider_credential", "deployment_purchase_price_version",
                 "model_points_price_version", "model_deployment", "logical_model", "provider",
                 "employee_agent_permission", "agent_api_key", "employee_credential", "agent", "employee",
@@ -298,6 +301,7 @@ abstract class AbstractIdentityIntegrationTest {
     protected Map<String, String> coreEnvironment(String mode, Map<String, String> overrides) {
         // 1、指定临时库、端口及安全配置，不读取项目根目录的 .env。
         var environment = new HashMap<String, String>();
+        environment.put("AIGATE_COMPANY_ZONE_ID", "Asia/Shanghai");
         environment.put("AIGATE_ENV_FILE", outputDirectory.resolve("no-user-env").toString());
         environment.put("AIGATE_CORE_PORT", Integer.toString(corePort));
         environment.put("AIGATE_DB_URL", mysql.getJdbcUrl() + (mysql.getJdbcUrl().contains("?") ? "&" : "?")

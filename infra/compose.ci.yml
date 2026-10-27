@@ -47,6 +47,7 @@ services:
       AIGATE_DB_URL: jdbc:mysql://mysql:3306/core_db?connectionTimeZone=UTC&connectTimeout=3000&socketTimeout=3000
       AIGATE_DB_USERNAME: aigate_app
       AIGATE_DB_PASSWORD: ${AIGATE_DB_PASSWORD:?required}
+      AIGATE_COMPANY_ZONE_ID: ${AIGATE_COMPANY_ZONE_ID:?required}
       AIGATE_FLYWAY_ENABLED: "false"
       AIGATE_SERVICE_TOKEN: ${AIGATE_SERVICE_TOKEN:?required}
       AIGATE_MANAGEMENT_PEPPER: ${AIGATE_MANAGEMENT_PEPPER:?required}

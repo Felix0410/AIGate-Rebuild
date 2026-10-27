@@ -46,6 +46,18 @@ public final class ValidatedBody {
      * @return 按字段白名单完成解析的请求正文
      */
     public static ValidatedBody parse(byte[] bytes, String... allowed) {
+        return parseAllowingNull(bytes, Set.of(), allowed);
+    }
+
+    /**
+     * 仅为合同明确允许的创建哨兵接受null，其余解析规则与普通管理请求一致。
+     *
+     * @param bytes JSON正文
+     * @param nullable 明确允许null的字段
+     * @param allowed 全部字段白名单
+     * @return 结构校验后的正文
+     */
+    public static ValidatedBody parseAllowingNull(byte[] bytes, Set<String> nullable, String... allowed) {
         // 1、检查正文非空，且不超过 64 KiB。
         if (bytes == null || bytes.length == 0 || bytes.length > ApiContractConstants.MAX_JSON_BODY_BYTES) {
             throw ApiException.invalid();
@@ -61,7 +73,7 @@ public final class ValidatedBody {
 
             // 3、拒绝显式 null，PATCH 不修改的字段应直接省略。
             for (var value : node.properties()) {
-                if (value.getValue().isNull()) {
+                if (value.getValue().isNull() && !nullable.contains(value.getKey())) {
                     throw ApiException.invalid();
                 }
             }
@@ -81,6 +93,16 @@ public final class ValidatedBody {
     public boolean has(String key) {
         // 检查客户端是否提交了该字段，供 PATCH 和审计使用。
         return node.has(key);
+    }
+
+    /**
+     * 区分显式null与未提供字段，只用于合同允许的创建版本哨兵。
+     *
+     * @param key 合同字段
+     * @return 字段存在且为null时为true
+     */
+    public boolean isNull(String key) {
+        return node.has(key) && node.get(key).isNull();
     }
 
     /**

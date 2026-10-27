@@ -75,7 +75,13 @@ public final class ManagementRouteCatalog {
         new Route("/api/v1/deployments/{deploymentId}/credentials", Set.of("GET", "POST")),
         new Route("/api/v1/deployments/{deploymentId}/credentials/{credentialId}", Set.of("DELETE")),
         new Route("/api/v1/agents/{agentId}/models", Set.of("GET")),
-        new Route("/api/v1/agents/{agentId}/models/{modelId}", Set.of("PUT", "DELETE")));
+        new Route("/api/v1/agents/{agentId}/models/{modelId}", Set.of("PUT", "DELETE")),
+        new Route("/api/v1/quotas/policies", Set.of("GET", "POST")),
+        new Route("/api/v1/quotas/policies/{policyId}/publish", Set.of("POST")),
+        new Route("/api/v1/employees/{employeeId}/quotas", Set.of("GET")),
+        new Route("/api/v1/provider-budgets", Set.of("GET")),
+        new Route("/api/v1/provider-budgets/{currency}/{month}", Set.of("GET", "PUT")),
+        new Route("/api/v1/finance-operations/{operationKey}", Set.of("GET")));
 
     /**
      * 识别编码路径、路径穿越和分号等可能绕过白名单的路径形式。

@@ -24,6 +24,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
             + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"})
 class AigateCoreApplicationTests {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationContext context;
+
     @MockitoBean
     IdentityMapper identityMapper;
 
@@ -33,6 +36,9 @@ class AigateCoreApplicationTests {
     @MockitoBean
     CatalogMapper catalogMapper;
 
+    @MockitoBean
+    com.felix.aigatecore.finance.FinanceMapper financeMapper;
+
     /**
      * 为装配测试生成临时安全配置，禁止复用开发环境真实密钥。
      *
@@ -40,6 +46,7 @@ class AigateCoreApplicationTests {
      */
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
+        registry.add("AIGATE_COMPANY_ZONE_ID", () -> "Asia/Shanghai");
         // 为装配测试生成独立随机凭证，不使用开发环境密钥。
         var random = new SecureRandom();
         byte[] service = new byte[32];
@@ -72,6 +79,7 @@ class AigateCoreApplicationTests {
     @Test
     @DisplayName("验证应用组件能够装配；本用例不代替真实数据库或网络验收。")
     void contextLoads() {
-        // Spring 上下文能启动并进入此方法，即表示装配成功；真实调用由集成测试检查。
+        // 默认部署不可装配Fake账务门面，测试profile不能因普通启动而自动启用。
+        org.junit.jupiter.api.Assertions.assertFalse(context.containsBean("fakeFinanceFacade"));
     }
 }
