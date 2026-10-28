@@ -42,6 +42,9 @@ class AigateCoreApplicationTests {
     @MockitoBean
     com.felix.aigatecore.finance.GrantMapper grantMapper;
 
+    @MockitoBean
+    com.felix.aigatecore.governance.GovernanceMapper governanceMapper;
+
     /**
      * 为装配测试生成临时安全配置，禁止复用开发环境真实密钥。
      *
@@ -59,11 +62,12 @@ class AigateCoreApplicationTests {
         registry.add("AIGATE_SERVICE_TOKEN",
             () -> "svc_" + Base64.getUrlEncoder().withoutPadding().encodeToString(service));
         registry.add("AIGATE_MANAGEMENT_PEPPER", () -> Base64.getEncoder().encodeToString(pepper));
-        for (String purpose : java.util.List.of("PROVIDER_ENCRYPTION_KEY", "PROVIDER_ISSUE_PEPPER")) {
+        for (String purpose : java.util.List.of("PROVIDER_ENCRYPTION_KEY", "PROVIDER_ISSUE_PEPPER",
+            "GOVERNANCE_AUDIT_HMAC_KEY")) {
             byte[] material = new byte[32];
             random.nextBytes(material);
             registry.add("AIGATE_" + purpose + (purpose.endsWith("PEPPER") ? "_KEY_ID" : "_ID"),
-                () -> purpose.toLowerCase(java.util.Locale.ROOT));
+                () -> "assembly-test-v1");
             registry.add("AIGATE_" + purpose, () -> Base64.getEncoder().encodeToString(material));
         }
         registry.add("AIGATE_CATALOG_APPROVALS_FILE", () -> "");

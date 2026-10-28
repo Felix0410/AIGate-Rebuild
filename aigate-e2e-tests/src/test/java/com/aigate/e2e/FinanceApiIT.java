@@ -47,7 +47,7 @@ class FinanceApiIT extends AbstractIdentityIntegrationTest {
         expect(call("PUT", budget, admin.key(), budget(null)), 409);
         expect(call("PUT", budget, admin.key(), budget(0L)), 200);
         expect(call("PUT", budget, admin.key(), budget(0L)), 409);
-        for (String path : List.of("/api/v1/models/1/routing-policies", "/api/v1/governance/policies/active",
+        for (String path : List.of("/api/v1/models/1/routing-policies", "/api/v1/models/1/routing-policies/1/publish",
             "/internal/v1/finance/reserve", "/internal/v1/finance/settle", "/v1/chat/completions")) {
             expect(call("POST", path, admin.key(), "{}"), 404);
         }

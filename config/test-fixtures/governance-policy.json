@@ -1,0 +1,121 @@
+{
+  "baseRevision": null,
+  "classificationRules": [
+    {
+      "ruleCode": "TRUSTED_CLASSIFICATION_FLOOR_V1",
+      "ruleKind": "CLASSIFY",
+      "severity": "INFO",
+      "detectedClass": "INTERNAL",
+      "exemptible": false,
+      "enabled": true,
+      "ruleOrder": 0,
+      "safeParameters": {
+        "defaultClass": "INTERNAL",
+        "honorVerifiedSourceTags": true
+      }
+    },
+    {
+      "ruleCode": "CREDENTIAL_PREFIX_HARD_DENY_V1",
+      "ruleKind": "SECRET_HARD_DENY",
+      "severity": "DENY",
+      "detectedClass": "RESTRICTED",
+      "exemptible": false,
+      "enabled": true,
+      "ruleOrder": 1,
+      "safeParameters": {
+        "detectorSet": "AIGATE_AND_PROVIDER_CREDENTIAL_V1"
+      }
+    },
+    {
+      "ruleCode": "APPROVED_SENSITIVE_MARKERS_V1",
+      "ruleKind": "CLASSIFY",
+      "severity": "WARN",
+      "detectedClass": "CONFIDENTIAL",
+      "exemptible": true,
+      "enabled": true,
+      "ruleOrder": 2,
+      "safeParameters": {
+        "markers": [
+          {
+            "code": "TEST_CONFIDENTIAL",
+            "matchText": "TEST-CONFIDENTIAL-MARKER",
+            "classification": "CONFIDENTIAL"
+          },
+          {
+            "code": "TEST_RESTRICTED",
+            "matchText": "TEST-RESTRICTED-MARKER",
+            "classification": "RESTRICTED"
+          }
+        ],
+        "ignoreCase": true
+      }
+    }
+  ],
+  "egressMatrix": [
+    {
+      "dataClass": "PUBLIC",
+      "hostingMode": "THIRD_PARTY_API",
+      "decision": "ALLOW_IF_APPROVED",
+      "requiresAgentApproval": true,
+      "requiresDeploymentBoundary": true
+    },
+    {
+      "dataClass": "PUBLIC",
+      "hostingMode": "SELF_HOSTED",
+      "decision": "ALLOW_IF_APPROVED",
+      "requiresAgentApproval": false,
+      "requiresDeploymentBoundary": false
+    },
+    {
+      "dataClass": "INTERNAL",
+      "hostingMode": "THIRD_PARTY_API",
+      "decision": "ALLOW_IF_APPROVED",
+      "requiresAgentApproval": true,
+      "requiresDeploymentBoundary": true
+    },
+    {
+      "dataClass": "INTERNAL",
+      "hostingMode": "SELF_HOSTED",
+      "decision": "ALLOW_IF_APPROVED",
+      "requiresAgentApproval": false,
+      "requiresDeploymentBoundary": false
+    },
+    {
+      "dataClass": "CONFIDENTIAL",
+      "hostingMode": "THIRD_PARTY_API",
+      "decision": "DENY",
+      "requiresAgentApproval": true,
+      "requiresDeploymentBoundary": true
+    },
+    {
+      "dataClass": "CONFIDENTIAL",
+      "hostingMode": "SELF_HOSTED",
+      "decision": "ALLOW_IF_APPROVED",
+      "requiresAgentApproval": false,
+      "requiresDeploymentBoundary": true
+    },
+    {
+      "dataClass": "RESTRICTED",
+      "hostingMode": "THIRD_PARTY_API",
+      "decision": "DENY",
+      "requiresAgentApproval": true,
+      "requiresDeploymentBoundary": true
+    },
+    {
+      "dataClass": "RESTRICTED",
+      "hostingMode": "SELF_HOSTED",
+      "decision": "DENY",
+      "requiresAgentApproval": false,
+      "requiresDeploymentBoundary": false
+    }
+  ],
+  "outputReviewRules": [
+    {
+      "dataClass": "CONFIDENTIAL",
+      "requiredMode": "BUFFERED_JSON",
+      "ruleCode": "CONFIDENTIAL_OUTPUT_SECRET_REVIEW_V1",
+      "maxBufferedBytes": 262144
+    }
+  ],
+  "reason": "SYNTHETIC_TEST_POLICY"
+}

@@ -69,6 +69,12 @@ class FinanceMySqlTests {
     @Autowired
     private GrantService grantService;
     @Autowired
+    private com.felix.aigatecore.governance.GovernanceService governance;
+    @Autowired
+    private com.felix.aigatecore.governance.GovernanceEvaluator evaluator;
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager tx;
+    @Autowired
     private FinancePeriods periods;
     @Autowired
     private MutableClock clock;
@@ -108,6 +114,9 @@ class FinanceMySqlTests {
         registry.add("spring.datasource.password", () -> APP_PASSWORD);
         registry.add("spring.flyway.user", () -> "root");
         registry.add("spring.flyway.password", () -> ROOT_PASSWORD);
+        String governance = Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(random()));
+        registry.add("AIGATE_GOVERNANCE_AUDIT_HMAC_KEY_ID", () -> "gov-audit-v1");
+        registry.add("AIGATE_GOVERNANCE_AUDIT_HMAC_KEY", () -> governance);
         registry.add("AIGATE_COMPANY_ZONE_ID", () -> "Asia/Shanghai");
         registry.add("AIGATE_SERVICE_TOKEN", () -> SERVICE);
         registry.add("AIGATE_BOOTSTRAP_MODE", () -> "INIT");
@@ -176,10 +185,15 @@ class FinanceMySqlTests {
     }
 
     private HttpResponse<String> http(String method, String path, String key, String body) throws Exception {
+        return http(method, path, key, body, "finance-fixture-bootstrap");
+    }
+
+    private HttpResponse<String> http(String method, String path, String key, String body, String idempotency)
+        throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
             .header("X-AIGate-Service-Authorization", "Bearer " + SERVICE)
             .header("X-AIGate-Client-Address", "127.0.0.1")
-            .header("Idempotency-Key", "finance-fixture-bootstrap");
+            .header("Idempotency-Key", idempotency);
         if (key != null) {
             request.header("Authorization", "Bearer " + key);
         }
@@ -607,7 +621,7 @@ class FinanceMySqlTests {
             .collect(java.util.stream.Collectors.joining("\n")).strip();
         assertEquals(ddl, java.nio.file.Files.readString(root.resolve(
             "aigate-core/src/main/resources/db/migration/V4__normal_quota_billing.sql")).strip());
-        assertEquals(5, count("flyway_schema_history"));
+        assertEquals(6, count("flyway_schema_history"));
         for (String table : List.of("quota_policy", "quota_bucket", "provider_spend_budget",
             "provider_spend_partition", "finance_operation", "points_reservation", "reservation_allocation",
             "provider_spend_reservation", "ledger_entry", "outbox_event")) {
@@ -668,7 +682,7 @@ class FinanceMySqlTests {
         assertThrows(java.sql.SQLException.class, () -> sql("UPDATE team_grant_issue_receipt SET amount_points=0"));
         assertEquals(1, count("team_grant_issue_receipt"));
         assertEquals(grant.grantId(), Long.parseLong(scalar("SELECT team_grant_id FROM team_grant_issue_receipt")));
-        assertEquals(5, count("flyway_schema_history"));
+        assertEquals(6, count("flyway_schema_history"));
     }
 
     @Test
@@ -965,7 +979,7 @@ class FinanceMySqlTests {
         var checksums = history("grant_upgrade_db");
         assertEquals(4, checksums.size());
         var flyway = org.flywaydb.core.Flyway.configure().dataSource(url, "root", ROOT_PASSWORD)
-            .locations("classpath:db/migration").load();
+            .locations("classpath:db/migration").target("5").load();
         assertEquals(1, flyway.migrate().migrationsExecuted);
         assertEquals(previous, tableDigests("grant_upgrade_db", tables));
         var upgraded = history("grant_upgrade_db");
@@ -974,6 +988,442 @@ class FinanceMySqlTests {
         assertEquals(0, flyway.migrate().migrationsExecuted);
         assertEquals(previous, tableDigests("grant_upgrade_db", tables));
         assertEquals(upgraded, history("grant_upgrade_db"));
+    }
+
+    @org.junit.jupiter.api.Nested
+    @DisplayName("P6真实MySQL治理状态机、当前策略锁与安全判定")
+    class GovernanceIntegration {
+        private record Actors(RequestContext editor, RequestContext approver, long editorId, long approverId) {
+        }
+
+        private Actors actors() throws Exception {
+            var editor = actor("GOV_EDITOR", "POLICY_EDITOR");
+            var approver = actor("GOV_APPROVER", "SECURITY_APPROVER");
+            return new Actors(editor.getValue(), approver.getValue(), editor.getKey(), approver.getKey());
+        }
+
+        private Map.Entry<Long, RequestContext> actor(String code, String role) throws Exception {
+            var created = http("POST", "/api/v1/employees", adminKey, json.writeValueAsString(Map.of(
+                "employeeCode", code, "displayName", code, "primaryTeamId", 1)));
+            assertEquals(201, created.statusCode());
+            long employee = json.readTree(created.body()).get("id").asLong();
+            assertEquals(201, http("PUT", "/api/v1/employees/" + employee + "/role-assignments/" + role + "/GLOBAL/0",
+                adminKey, null).statusCode());
+            var credential = http("POST", "/api/v1/employees/" + employee + "/management-credentials", adminKey,
+                json.writeValueAsString(Map.of("expiresAt", Instant.now().plusSeconds(60L * 86400)
+                    .truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString())),
+                "gov-credential-" + employee);
+            assertEquals(201, credential.statusCode());
+            String key = json.readTree(credential.body()).get("key").asString();
+            return Map.entry(employee, new RequestContext("Bearer " + key, "127.0.0.1", "gov-mgt-" + employee));
+        }
+
+        private tools.jackson.databind.node.ObjectNode policyJson(Long base) throws Exception {
+            var node = (tools.jackson.databind.node.ObjectNode) json.readTree(java.nio.file.Files.readString(
+                java.nio.file.Path.of("../config/test-fixtures/governance-policy.json")));
+            if (base == null) {
+                node.putNull("baseRevision");
+            } else {
+                node.put("baseRevision", base);
+            }
+            return node;
+        }
+
+        private ValidatedBody draftBody(tools.jackson.databind.node.ObjectNode node) {
+            return ValidatedBody.parseAllowingNull(json.writeValueAsBytes(node), Set.of("baseRevision"), "baseRevision",
+                "classificationRules", "egressMatrix", "outputReviewRules", "reason");
+        }
+
+        private long approvedDraft(Actors actors, Long base, boolean restrictive) throws Exception {
+            var config = policyJson(base);
+            if (restrictive) {
+                for (var cell : config.get("egressMatrix")) {
+                    if ("INTERNAL".equals(cell.get("dataClass").asString())
+                        && "THIRD_PARTY_API".equals(cell.get("hostingMode").asString())) {
+                        ((tools.jackson.databind.node.ObjectNode) cell).put("decision", "DENY");
+                    }
+                }
+            }
+            long revision = governance.draft(actors.editor(), draftBody(config)).revisionId();
+            governance.submit(actors.editor(), revision);
+            governance.review(actors.approver(), revision, body(Map.of("decision", "APPROVE", "reasonCode", "REVIEW_OK",
+                "expectedVersion", 1), "decision", "reasonCode", "expectedVersion"));
+            return revision;
+        }
+
+        private ValidatedBody publishBody(long version, Long active) {
+            String value = "{\"expectedPolicyVersion\":" + version + ",\"expectedActiveRevisionId\":" + active + "}";
+            return ValidatedBody.parseAllowingNull(value.getBytes(StandardCharsets.UTF_8),
+                Set.of("expectedActiveRevisionId"),
+                "expectedPolicyVersion", "expectedActiveRevisionId");
+        }
+
+        private long published(Actors actors) throws Exception {
+            long revision = approvedDraft(actors, null, false);
+            governance.publish(actors.approver(), revision, publishBody(0, null));
+            return revision;
+        }
+
+        private void egress(Actors actors) {
+            governance.approveEgress(actors.approver(), body(Map.of("agentId", 1, "providerId", 1, "regionCode", "TEST",
+                "approvedClassMax", "INTERNAL", "validFrom", "2026-01-01T00:00:00Z", "validUntil",
+                clock.instant().plusSeconds(7200).toString(), "reasonCode", "EGRESS_REVIEW_OK"),
+                "agentId", "providerId", "regionCode", "approvedClassMax", "validFrom", "validUntil", "reasonCode"));
+        }
+
+        private void boundary(Actors actors, String classification, Long version, boolean approved) {
+            String value = "{\"approvedClassMax\":\"" + classification + "\",\"regionCode\":\"TEST\",\"validUntil\":\""
+                + clock.instant().plusSeconds(7200) + "\",\"dataProcessingApproved\":" + approved
+                + ",\"expectedVersion\":" + version + ",\"reasonCode\":\"BOUNDARY_REVIEW_OK\"}";
+            governance.boundary(actors.approver(), 1,
+                ValidatedBody.parseAllowingNull(value.getBytes(StandardCharsets.UTF_8),
+                    Set.of("expectedVersion"), "approvedClassMax", "regionCode", "validUntil", "dataProcessingApproved",
+                    "expectedVersion", "reasonCode"));
+        }
+
+        private com.felix.aigatecore.governance.GovernanceEvaluator.Context context(String phase, String floor) {
+            return new com.felix.aigatecore.governance.GovernanceEvaluator.Context(1, 1, 1, 1, floor,
+                "gov-" + random(), phase, 1);
+        }
+
+        private byte[] messages(String content, boolean stream) {
+            return json.writeValueAsBytes(Map.of("messages", List.of(Map.of("role", "user", "content", content)),
+                "stream", stream));
+        }
+
+        private void localDeployment() throws Exception {
+            sql("UPDATE model_deployment SET hosting_mode='SELF_HOSTED',cost_model='INTERNAL_RESOURCE',"
+                + "active_purchase_price_version_id=NULL");
+            sql("UPDATE provider SET hosting_mode='SELF_HOSTED'");
+        }
+
+        private long exception(Actors actors) {
+            long id = governance.requestException(admin,
+                body(Map.of("agentId", 1, "modelCode", "FAKE_MODEL", "ruleCode",
+                    "APPROVED_SENSITIVE_MARKERS_V1", "reasonCode", "FALSE_POSITIVE_REVIEW", "validUntil",
+                    clock.instant().plusSeconds(3600).toString()), "agentId", "modelCode", "ruleCode", "reasonCode",
+                    "validUntil"),
+                "gov-exception-" + random()).requestId();
+            governance.reviewException(actors.approver(), id,
+                body(Map.of("decision", "APPROVE", "reasonCode", "REVIEW_OK",
+                    "expectedVersion", 0), "decision", "reasonCode", "expectedVersion"));
+            return id;
+        }
+
+        @Test
+        @DisplayName("BIZP6-01/02/D50-07：无策略fail closed，Admin不隐含安全角色，自审即使双角色也拒绝")
+        void defaultDenyAndSeparationOfDutiesAreRealDatabaseFacts() throws Exception {
+            var denied = evaluator.evaluate(context("PREQUEUE", null), messages("ordinary", false));
+            assertEquals("POLICY_NOT_CONFIGURED", denied.reasonCode());
+            assertEquals("DENY", denied.decision());
+            assertEquals(0, count("governance_decision_audit"));
+            Actors actors = actors();
+            assertThrows(ApiException.class, () -> governance.draft(admin, draftBody(policyJson(null))));
+            var draft = governance.draft(actors.editor(), draftBody(policyJson(null)));
+            assertEquals("NOT_CONFIGURED", governance.active(admin).status());
+            governance.submit(actors.editor(), draft.revisionId());
+            assertEquals(201, http("PUT", "/api/v1/employees/" + actors.editorId()
+                + "/role-assignments/SECURITY_APPROVER/GLOBAL/0", adminKey, null).statusCode());
+            assertEquals(403,
+                assertThrows(ApiException.class, () -> governance.review(actors.editor(), draft.revisionId(),
+                    body(Map.of("decision", "APPROVE", "reasonCode", "SELF_REVIEW", "expectedVersion", 1),
+                        "decision", "reasonCode", "expectedVersion")))
+                    .status());
+            assertEquals("UNDER_REVIEW", scalar("SELECT status FROM governance_policy_revision"));
+            assertEquals("0", scalar("SELECT COUNT(*) FROM governance_policy_revision WHERE approved_by IS NOT NULL"));
+        }
+
+        @Test
+        @DisplayName("BIZP6-03/R-AUD-01：真实并发Review和双CAS发布只成功一次，旧版内容不可变")
+        void reviewAndPublishCompareAndSwapHaveOneWinner() throws Exception {
+            Actors actors = actors();
+            long first = published(actors);
+            String oldDigest = scalar("SELECT HEX(content_digest) FROM governance_policy_revision WHERE id=" + first);
+            var draft = governance.draft(actors.editor(), draftBody(policyJson(first)));
+            governance.submit(actors.editor(), draft.revisionId());
+            var results = competing(() -> {
+                try {
+                    governance.review(actors.approver(), draft.revisionId(), body(Map.of("decision", "APPROVE",
+                        "reasonCode", "REVIEW_OK", "expectedVersion", 1), "decision", "reasonCode", "expectedVersion"));
+                    return true;
+                } catch (ApiException failure) {
+                    assertEquals(409, failure.status());
+                    return false;
+                }
+            });
+            assertEquals(1, results.stream().filter(Boolean::booleanValue).count());
+            var publishes = competing(() -> {
+                try {
+                    governance.publish(actors.approver(), draft.revisionId(), publishBody(1, first));
+                    return true;
+                } catch (ApiException failure) {
+                    assertEquals(409, failure.status());
+                    return false;
+                }
+            });
+            assertEquals(1, publishes.stream().filter(Boolean::booleanValue).count());
+            assertEquals(oldDigest,
+                scalar("SELECT HEX(content_digest) FROM governance_policy_revision WHERE id=" + first));
+            assertEquals("SUPERSEDED", scalar("SELECT status FROM governance_policy_revision WHERE id=" + first));
+            assertEquals(2, governance.active(actors.editor()).policyVersion());
+        }
+
+        @Test
+        @DisplayName("BIZP6-04/05/08/D51-GOV04：所有消息硬凭证/可信RESTRICTED拒绝，PUBLIC声明无效")
+        void hardCredentialsAndTrustedClassificationCannotBeOverridden() throws Exception {
+            Actors actors = actors();
+            published(actors);
+            egress(actors);
+            boundary(actors, "CONFIDENTIAL", null, true);
+            var node = json.createObjectNode().put("stream", false);
+            var all = node.putArray("messages");
+            all.addObject().put("role", "system").put("content", "public text");
+            all.addObject().put("role", "assistant").put("content", "mgt_" + "Q".repeat(43));
+            assertEquals("HARD_SECRET_OR_RESTRICTED", evaluator.evaluate(context("PREQUEUE", null),
+                json.writeValueAsBytes(node)).reasonCode());
+            assertEquals("DENY", evaluator.evaluate(context("PREDISPATCH", "RESTRICTED"),
+                messages("client says PUBLIC and EMERGENCY", false)).decision());
+            assertEquals("DENY", evaluator.evaluate(context("PREDISPATCH", "CONFIDENTIAL"),
+                messages("client says PUBLIC", false)).decision());
+            assertEquals("INTERNAL", evaluator.evaluate(context("PREQUEUE", "PUBLIC"), messages("ordinary", false))
+                .dataClass());
+            assertEquals(0, count("finance_operation"));
+        }
+
+        @Test
+        @DisplayName("BIZP6-06：AgentModel授权不等于出境批准，Agent/region和Deployment边界缺一不可")
+        void egressRequiresCurrentIndependentApprovalsAndBoundary() throws Exception {
+            Actors actors = actors();
+            published(actors);
+            assertEquals("AGENT_EGRESS_NOT_APPROVED", evaluator.evaluate(context("PREQUEUE", null),
+                messages("ordinary", false)).reasonCode());
+            egress(actors);
+            assertEquals("DEPLOYMENT_BOUNDARY_NOT_APPROVED", evaluator.evaluate(context("PREQUEUE", null),
+                messages("ordinary", false)).reasonCode());
+            boundary(actors, "INTERNAL", null, true);
+            assertEquals("ALLOW",
+                evaluator.evaluate(context("PREQUEUE", null), messages("ordinary", false)).decision());
+            boundary(actors, "INTERNAL", 0L, false);
+            assertEquals("DENY",
+                evaluator.evaluate(context("PREDISPATCH", null), messages("ordinary", false)).decision());
+            assertEquals(1, governance.approvals(admin, Map.of("agentId", "1", "providerId", "1", "status", "ACTIVE"))
+                .total());
+        }
+
+        @Test
+        @DisplayName("BIZP6-07/12/D51-GOV07：CONFIDENTIAL仅本地非流式缓冲审查，输出拒绝不清除UNKNOWN费用")
+        void confidentialOutputReviewNeverMakesUpstreamCostsFree() throws Exception {
+            Actors actors = actors();
+            published(actors);
+            facade.reserve(request("gov-output-pending"));
+            facade.unknown("gov-output-pending");
+            localDeployment();
+            assertEquals("DENY", evaluator.evaluate(context("PREDISPATCH", "CONFIDENTIAL"),
+                messages("ordinary", false)).decision());
+            boundary(actors, "CONFIDENTIAL", null, true);
+            assertEquals("DENY", evaluator.evaluate(context("PREDISPATCH", "CONFIDENTIAL"),
+                messages("ordinary", true)).decision());
+            var context = context("PREDISPATCH", "CONFIDENTIAL");
+            assertEquals("REVIEW_REQUIRED", evaluator.evaluate(context, messages("ordinary", false)).decision());
+            var output = evaluator.reviewOutput(context, ("mgt_" + "X".repeat(43)).getBytes(StandardCharsets.UTF_8));
+            assertEquals("DENY", output.decision());
+            assertEquals("OUTPUT_SECRET_DENIED", output.reasonCode());
+            assertEquals("PENDING_RECONCILIATION", scalar("SELECT status FROM finance_operation"));
+            assertEquals("25.000000", scalar("SELECT SUM(reserved_points) FROM quota_bucket"));
+            assertEquals("0.03000000", scalar("SELECT reserved_amount FROM provider_spend_budget"));
+            var safe = context("PREDISPATCH", "CONFIDENTIAL");
+            evaluator.evaluate(safe, messages("ordinary", false));
+            assertEquals("ALLOW",
+                evaluator.reviewOutput(safe, "safe response".getBytes(StandardCharsets.UTF_8)).decision());
+            var huge = context("PREDISPATCH", "CONFIDENTIAL");
+            evaluator.evaluate(huge, messages("ordinary", false));
+            assertEquals("OUTPUT_LIMIT_EXCEEDED", evaluator.reviewOutput(huge, new byte[262145]).reasonCode());
+        }
+
+        @Test
+        @DisplayName("BIZP6-09/D51-GOV05/R-AUD-02：误报例外绑定主体和修订，不能豁免来源/硬凭证/其它标记")
+        void exceptionCannotLowerTrustedFloorOrSuppressOtherSignals() throws Exception {
+            Actors actors = actors();
+            published(actors);
+            egress(actors);
+            boundary(actors, "CONFIDENTIAL", null, true);
+            assertEquals("DENY", evaluator.evaluate(context("PREQUEUE", null),
+                messages("TEST-CONFIDENTIAL-MARKER", false)).decision());
+            long exception = exception(actors);
+            assertEquals("ALLOW", evaluator.evaluate(context("PREQUEUE", null),
+                messages("TEST-CONFIDENTIAL-MARKER", false)).decision());
+            Instant beforeExpiry = clock.instant();
+            clock.value = beforeExpiry.plusSeconds(3601);
+            assertEquals("DENY", evaluator.evaluate(context("PREDISPATCH", null),
+                messages("TEST-CONFIDENTIAL-MARKER", false)).decision());
+            clock.value = beforeExpiry;
+            sql("INSERT INTO employee_agent_permission(employee_id,agent_id,granted_by_employee_id,granted_at,"
+                + "created_at,updated_at) VALUES(" + actors.editorId()
+                + ",1,1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))");
+            var otherEmployee = new com.felix.aigatecore.governance.GovernanceEvaluator.Context(actors.editorId(),
+                1, 1, 1, null, "gov-other-" + random(), "PREDISPATCH", 1);
+            assertEquals("DENY", evaluator.evaluate(otherEmployee,
+                messages("TEST-CONFIDENTIAL-MARKER", false)).decision());
+            assertEquals("DENY", evaluator.evaluate(context("PREQUEUE", "CONFIDENTIAL"),
+                messages("TEST-CONFIDENTIAL-MARKER", false)).decision());
+            assertEquals("DENY", evaluator.evaluate(context("PREQUEUE", null),
+                messages("TEST-CONFIDENTIAL-MARKER TEST-RESTRICTED-MARKER", false)).decision());
+            assertEquals("DENY", evaluator.evaluate(context("PREQUEUE", null),
+                messages("TEST-CONFIDENTIAL-MARKER mgt_" + "Q".repeat(43), false)).decision());
+            governance.revokeException(actors.approver(), exception, body(Map.of("reasonCode", "REVOKED_APPROVAL",
+                "expectedVersion", 1), "reasonCode", "expectedVersion"));
+            assertThrows(ApiException.class, () -> governance.revokeException(actors.approver(), exception,
+                body(Map.of("reasonCode", "REPEAT_REVOKE", "expectedVersion", 1), "reasonCode", "expectedVersion")));
+            assertEquals("DENY", evaluator.evaluate(context("PREDISPATCH", null),
+                messages("TEST-CONFIDENTIAL-MARKER", false)).decision());
+        }
+
+        @Test
+        @DisplayName("BIZP6-10：PREQUEUE旧策略允许，发布后PREDISPATCH重扫；扫描期间变更拒绝陈旧结果")
+        void freshAndStaleScansCannotBypassPublishedPolicy() throws Exception {
+            Actors actors = actors();
+            long first = published(actors);
+            egress(actors);
+            boundary(actors, "INTERNAL", null, true);
+            assertEquals("ALLOW",
+                evaluator.evaluate(context("PREQUEUE", null), messages("ordinary", false)).decision());
+            var prepared = evaluator.prepare(context("PREDISPATCH", null), messages("ordinary", false));
+            long second = approvedDraft(actors, first, true);
+            governance.publish(actors.approver(), second, publishBody(1, first));
+            assertEquals("POLICY_REVISION_CHANGED", evaluator.finalizePrepared(prepared).reasonCode());
+            assertEquals("EGRESS_MATRIX_DENY", evaluator.evaluate(context("PREDISPATCH", null),
+                messages("ordinary", false)).reasonCode());
+            assertEquals(0, count("finance_operation"));
+        }
+
+        @Test
+        @DisplayName("BIZP6-11：最终治理共享锁和发布独占锁真实竞争，先提交顺序决定策略归属")
+        void finalGuardAndPolicyPublishHaveDatabaseLinearization() throws Exception {
+            Actors actors = actors();
+            long first = published(actors);
+            egress(actors);
+            boundary(actors, "INTERNAL", null, true);
+            long second = approvedDraft(actors, first, true);
+            var prepared = evaluator.prepare(context("PREDISPATCH", null), messages("ordinary", false));
+            var acquired = new CountDownLatch(1);
+            var release = new CountDownLatch(1);
+            try (var workers = Executors.newFixedThreadPool(2)) {
+                var guard = workers.submit(() -> new org.springframework.transaction.support.TransactionTemplate(tx)
+                    .execute(status -> {
+                        var verdict = evaluator.finalizePrepared(prepared);
+                        acquired.countDown();
+                        try {
+                            assertTrue(release.await(5, java.util.concurrent.TimeUnit.SECONDS));
+                        } catch (InterruptedException failure) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException("Test interrupted");
+                        }
+                        return verdict;
+                    }));
+                assertTrue(acquired.await(5, java.util.concurrent.TimeUnit.SECONDS));
+                var published = workers
+                    .submit(() -> governance.publish(actors.approver(), second, publishBody(1, first)));
+                try {
+                    assertThrows(java.util.concurrent.TimeoutException.class,
+                        () -> published.get(150, java.util.concurrent.TimeUnit.MILLISECONDS));
+                } finally {
+                    release.countDown();
+                }
+                assertEquals("ALLOW", guard.get().decision());
+                assertEquals(second, published.get().revisionId());
+            }
+            assertEquals("DENY",
+                evaluator.evaluate(context("PREDISPATCH", null), messages("ordinary", false)).decision());
+        }
+
+        @Test
+        @DisplayName("BIZP6-12：损坏规则/UTF8/超限输入均拒绝，审计没有正文/标记/HMAC回读")
+        void corruptedPolicyAndBadInputsFailClosedWithoutPersistingText() throws Exception {
+            Actors actors = actors();
+            published(actors);
+            egress(actors);
+            boundary(actors, "INTERNAL", null, true);
+            String prompt = "private synthetic text mgt_" + "X".repeat(43);
+            evaluator.evaluate(context("PREQUEUE", null), messages(prompt, false));
+            var invalid = evaluator.evaluate(context("PREQUEUE", null), new byte[]{(byte) 0xff});
+            assertEquals("GOVERNANCE_SCANNER_UNAVAILABLE", invalid.reasonCode());
+            var tooLarge = evaluator.evaluate(context("PREQUEUE", null), new byte[65537]);
+            assertEquals("DENY", tooLarge.decision());
+            var decisions = governance.decisions(admin, Map.of("agentId", "1", "decision", "DENY"));
+            assertEquals(3, decisions.total());
+            String exposed = json.writeValueAsString(decisions);
+            assertFalse(exposed.contains("private synthetic"));
+            assertFalse(exposed.contains("inputHmac"));
+            String stored = scalar(
+                "SELECT CAST(matched_rule_codes_json AS CHAR) FROM governance_decision_audit LIMIT 1");
+            assertFalse(stored.contains(prompt));
+            assertFalse(stored.contains("TEST-CONFIDENTIAL-MARKER"));
+            sql("UPDATE governance_rule SET enabled=FALSE WHERE rule_code='CREDENTIAL_PREFIX_HARD_DENY_V1'");
+            assertEquals("POLICY_INTEGRITY_FAILURE", evaluator.evaluate(context("PREDISPATCH", null),
+                messages("ordinary", false)).reasonCode());
+        }
+
+        @Test
+        @DisplayName("P6真实故障注入：治理审计落库失败不可返回ALLOW，未创建资金或Provider许可")
+        void auditFailureCannotReturnAllow() throws Exception {
+            Actors actors = actors();
+            published(actors);
+            egress(actors);
+            boundary(actors, "INTERNAL", null, true);
+            sql("CREATE TRIGGER reject_governance_decision BEFORE INSERT ON governance_decision_audit FOR EACH ROW "
+                + "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='test failure'");
+            try {
+                assertThrows(RuntimeException.class,
+                    () -> evaluator.evaluate(context("PREDISPATCH", null), messages("ordinary", false)));
+                assertEquals(0, count("governance_decision_audit"));
+                assertEquals(0, count("finance_operation"));
+            } finally {
+                sql("DROP TRIGGER reject_governance_decision");
+            }
+        }
+
+        @Test
+        @DisplayName("BIZP6-01/FZSQL-11/16：真实V5历史升级V6，30张原表数据/checksum保留，新角色受限")
+        void realV5HistorySurvivesV6RoleCheckReplacement() throws Exception {
+            teamPool("1000.000000", null);
+            grant("gov-upgrade-grant", "100.000000", "2026-11-05T00:00:00Z");
+            sql("CREATE DATABASE governance_upgrade_db");
+            String url = MYSQL.getJdbcUrl().replace("/core_db", "/governance_upgrade_db");
+            org.flywaydb.core.Flyway.configure().dataSource(url, "root", ROOT_PASSWORD)
+                .locations("classpath:db/migration").target("5").load().migrate();
+            var tables = new ArrayList<String>();
+            try (var connection = DriverManager.getConnection(MYSQL.getJdbcUrl(), "root", ROOT_PASSWORD);
+                var statement = connection.createStatement()) {
+                try (var rows = statement.executeQuery("SELECT table_name FROM information_schema.tables "
+                    + "WHERE table_schema='governance_upgrade_db' AND table_name!='flyway_schema_history'")) {
+                    while (rows.next()) {
+                        tables.add(rows.getString(1));
+                    }
+                }
+                statement.execute("SET FOREIGN_KEY_CHECKS=0");
+                for (String table : tables) {
+                    statement.execute("TRUNCATE TABLE governance_upgrade_db." + table);
+                    statement.execute("INSERT INTO governance_upgrade_db." + table + " SELECT * FROM core_db." + table);
+                }
+                statement.execute("SET FOREIGN_KEY_CHECKS=1");
+            }
+            assertEquals(30, tables.size());
+            var before = tableDigests("governance_upgrade_db", tables);
+            var checksums = history("governance_upgrade_db");
+            var flyway = org.flywaydb.core.Flyway.configure().dataSource(url, "root", ROOT_PASSWORD)
+                .locations("classpath:db/migration").target("6").load();
+            assertEquals(1, flyway.migrate().migrationsExecuted);
+            assertEquals(before, tableDigests("governance_upgrade_db", tables));
+            var after = history("governance_upgrade_db");
+            assertEquals(6, after.size());
+            checksums.forEach((version, checksum) -> assertEquals(checksum, after.get(version)));
+            assertEquals(0, flyway.migrate().migrationsExecuted);
+            sql("INSERT INTO governance_upgrade_db.role_assignment(employee_id,role_code,scope_type,scope_id,"
+                + "created_at,updated_at) VALUES(1,'POLICY_EDITOR','GLOBAL',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))");
+            assertThrows(java.sql.SQLException.class, () -> sql("INSERT INTO governance_upgrade_db.role_assignment"
+                + "(employee_id,role_code,scope_type,scope_id,created_at,updated_at) "
+                + "VALUES(1,'SECURITY_APPROVER','TEAM',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"));
+        }
     }
 
     @AfterEach

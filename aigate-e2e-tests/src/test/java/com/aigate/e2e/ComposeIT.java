@@ -191,6 +191,8 @@ class ComposeIT {
             env.put(name, secret());
         }
 
+        env.put("AIGATE_GOVERNANCE_AUDIT_HMAC_KEY",
+            Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(secret())));
         env.put("AIGATE_COMPANY_ZONE_ID", "Asia/Shanghai");
         env.put("AIGATE_SERVICE_TOKEN", "svc_" + secret());
         env.put("AIGATE_BOOTSTRAP_TOKEN", "bst_" + secret());
@@ -254,7 +256,7 @@ class ComposeIT {
             compose("run", "--rm", "migrate");
             String history = compose("exec", "-T", "-e", "MYSQL_PWD", "mysql", "mysql", "-uroot", "-Nse",
                 "SELECT COUNT(*) FROM core_db.flyway_schema_history WHERE success=1");
-            assertEquals("5", history.strip());
+            assertEquals("6", history.strip());
             compose("logs", "--no-color");
         } finally {
             try {

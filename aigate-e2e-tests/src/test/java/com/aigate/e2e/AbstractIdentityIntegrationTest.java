@@ -75,6 +75,8 @@ abstract class AbstractIdentityIntegrationTest {
 
     protected final String providerEncryptionKey = Base64.getEncoder().encodeToString(randomBytes());
 
+    protected final String governanceHmac = Base64.getEncoder().encodeToString(randomBytes());
+
     protected final String providerIssuePepper = Base64.getEncoder().encodeToString(randomBytes());
 
     protected MySQLContainer mysql;
@@ -222,7 +224,7 @@ abstract class AbstractIdentityIntegrationTest {
         assertEquals(21, Runtime.version().feature(), "Use JDK21 to run the P1 contract");
         Files.createDirectories(outputDirectory);
         secretValues.addAll(List.of(rootPassword, appPassword, migratorPassword, serviceToken, bootstrapToken, pepper,
-            agentPepper, employeePepper, providerEncryptionKey, providerIssuePepper));
+            agentPepper, employeePepper, providerEncryptionKey, providerIssuePepper, governanceHmac));
 
         // 2、启动独立 MySQL 容器，创建只读写数据的应用账号和可执行 DDL 的迁移账号。
         mysql = new MySQLContainer(DockerImageName.parse(MYSQL_IMAGE).asCompatibleSubstituteFor("mysql"))
@@ -273,7 +275,10 @@ abstract class AbstractIdentityIntegrationTest {
         try (Connection db = db();
             var statement = db.createStatement()) {
             statement.execute("SET FOREIGN_KEY_CHECKS=0");
-            for (String table : List.of("team_grant_issue_receipt", "team_grant", "team_pool", "outbox_event",
+            for (String table : List.of("governance_decision_audit", "governance_exception_request",
+                "deployment_data_boundary",
+                "agent_egress_approval", "governance_rule", "governance_policy_revision", "governance_policy",
+                "team_grant_issue_receipt", "team_grant", "team_pool", "outbox_event",
                 "ledger_entry", "provider_spend_reservation",
                 "reservation_allocation",
                 "points_reservation", "finance_operation", "provider_spend_partition", "provider_spend_budget",
@@ -302,6 +307,8 @@ abstract class AbstractIdentityIntegrationTest {
     protected Map<String, String> coreEnvironment(String mode, Map<String, String> overrides) {
         // 1、指定临时库、端口及安全配置，不读取项目根目录的 .env。
         var environment = new HashMap<String, String>();
+        environment.put("AIGATE_GOVERNANCE_AUDIT_HMAC_KEY_ID", "gov-audit-v1");
+        environment.put("AIGATE_GOVERNANCE_AUDIT_HMAC_KEY", governanceHmac);
         environment.put("AIGATE_COMPANY_ZONE_ID", "Asia/Shanghai");
         environment.put("AIGATE_ENV_FILE", outputDirectory.resolve("no-user-env").toString());
         environment.put("AIGATE_CORE_PORT", Integer.toString(corePort));

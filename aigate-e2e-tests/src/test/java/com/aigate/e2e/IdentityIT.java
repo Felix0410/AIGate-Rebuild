@@ -85,7 +85,7 @@ class IdentityIT extends AbstractIdentityIntegrationTest {
 
         expect(call("POST", "/api/v1/bootstrap/initialize", bootstrapToken, bootstrapBody("Other", "ADM_OTHER"),
             "bootstrap-restart"), 409);
-        assertEquals(5, scalar("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1"));
+        assertEquals(6, scalar("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1"));
     }
 
     /**
@@ -440,11 +440,11 @@ class IdentityIT extends AbstractIdentityIntegrationTest {
         expect(protectedTrace, 201);
         assertFalse(protectedTrace.headers().get("x-request-id").contains(admin.key()));
         assertEquals(0, scalar("SELECT COUNT(*) FROM admin_audit_event WHERE trace_id LIKE 'mgt_%'"));
-        assertEquals(70, ManagementRouteCatalog.ALL.stream().mapToInt(route -> route.methods().size()).sum());
+        assertEquals(82, ManagementRouteCatalog.ALL.stream().mapToInt(route -> route.methods().size()).sum());
 
         // 2、检查内部接口和尚未开放的接口不能通过 Gateway 访问。
         for (String path : List.of("/internal/v1/ping", "/actuator/env", "/v1/chat/completions",
-            "/api/v1/finops/summary", "/api/v1/governance/policies/active")) {
+            "/api/v1/finops/summary", "/api/v1/models/1/routing-policies")) {
             expect(call("GET", path, admin.key(), null), 404);
         }
 
@@ -572,7 +572,7 @@ class IdentityIT extends AbstractIdentityIntegrationTest {
         }
 
         // 2、检查表数量和 V1 成功迁移记录不变。
-        assertEquals(31, scalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='core_db'"));
+        assertEquals(38, scalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='core_db'"));
         assertEquals(1, scalar("SELECT COUNT(*) FROM flyway_schema_history WHERE version='1' AND success=1"));
 
         // 3、直接提交非法状态和不存在的外键，检查数据库约束仍生效。

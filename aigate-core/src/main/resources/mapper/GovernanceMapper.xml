@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.felix.aigatecore.governance.GovernanceMapper">
+    <select id="policy" resultType="com.felix.aigatecore.governance.GovernanceRows$Policy">
+        SELECT id,active_revision_id,version FROM governance_policy WHERE company_scope_id=1
+    </select>
+    <select id="lockPolicy" resultType="com.felix.aigatecore.governance.GovernanceRows$Policy">
+        SELECT id,active_revision_id,version FROM governance_policy WHERE company_scope_id=1 FOR UPDATE
+    </select>
+    <select id="sharePolicy" resultType="com.felix.aigatecore.governance.GovernanceRows$Policy">
+        SELECT id,active_revision_id,version FROM governance_policy WHERE company_scope_id=1 FOR SHARE
+    </select>
+    <select id="shareIdentity" resultType="java.lang.Long">
+        SELECT id FROM bootstrap_control WHERE id=1 FOR SHARE
+    </select>
+    <insert id="insertPolicy" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO governance_policy(company_scope_id,created_at,updated_at) VALUES(1,#{now},#{now})
+    </insert>
+    <select id="revision" resultType="com.felix.aigatecore.governance.GovernanceRows$Revision">
+        SELECT * FROM governance_policy_revision WHERE id=#{id}
+    </select>
+    <select id="lockRevision" resultType="com.felix.aigatecore.governance.GovernanceRows$Revision">
+        SELECT * FROM governance_policy_revision WHERE id=#{id} FOR UPDATE
+    </select>
+    <select id="nextRevision" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(revision_no),0)+1 FROM governance_policy_revision WHERE policy_id=#{policy}
+    </select>
+    <insert id="insertRevision" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO governance_policy_revision(policy_id,revision_no,base_revision_id,config_json,content_digest,created_by,created_at,updated_at) VALUES(#{policy},#{revision},#{base},#{config},#{digest},#{actor},#{now},#{now})
+    </insert>
+    <insert id="insertRule">
+        INSERT INTO governance_rule(revision_id,rule_code,rule_kind,severity,detected_class,exemptible,safe_parameter_json,enabled,rule_order,created_at) VALUES(#{revision},#{code},#{kind},#{severity},#{classification},#{exemptible},#{parameters},#{enabled},#{order},#{now})
+    </insert>
+    <select id="rules" resultType="com.felix.aigatecore.governance.GovernanceRows$Rule">
+        SELECT * FROM governance_rule WHERE revision_id=#{id} ORDER BY rule_order,id
+    </select>
+    <update id="submitRevision">
+        UPDATE governance_policy_revision SET status='UNDER_REVIEW',version=version+1,updated_at=#{now} WHERE id=#{id} AND status='DRAFT' AND version=#{version}
+    </update>
+    <update id="reviewRevision">
+        UPDATE governance_policy_revision SET status=#{status},version=version+1,approved_by=#{approver},approved_at=#{approvedAt},updated_at=#{now} WHERE id=#{id} AND status='UNDER_REVIEW' AND version=#{version}
+    </update>
+    <update id="supersedeRevision">
+        UPDATE governance_policy_revision SET status='SUPERSEDED',version=version+1,updated_at=#{now} WHERE id=#{id} AND status='PUBLISHED'
+    </update>
+    <update id="publishRevision">
+        UPDATE governance_policy_revision SET status='PUBLISHED',version=version+1,published_by=#{actor},published_at=#{now},updated_at=#{now} WHERE id=#{id} AND status='APPROVED'
+    </update>
+    <update id="activatePolicy">
+        UPDATE governance_policy SET active_revision_id=#{revision},version=version+1,updated_at=#{now} WHERE id=#{id} AND version=#{version} AND active_revision_id &lt;=> #{active}
+    </update>
+    <select id="nextApprovalRevision" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(revision),0)+1 FROM agent_egress_approval WHERE agent_id=#{agent} AND provider_id=#{provider} AND region_code=#{region}
+    </select>
+    <update id="retireApprovals">
+        UPDATE agent_egress_approval SET status='REVOKED',updated_at=#{now}
+        WHERE agent_id=#{agent} AND provider_id=#{provider} AND region_code=#{region} AND status='ACTIVE'
+    </update>
+    <insert id="insertApproval" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent_egress_approval(agent_id,provider_id,region_code,revision,data_class_max,valid_from,valid_until,status,approved_by,created_at,updated_at) VALUES(#{agent},#{provider},#{region},#{revision},#{classification},#{from},#{until},'ACTIVE',#{actor},#{now},#{now})
+    </insert>
+    <select id="approval" resultType="com.felix.aigatecore.governance.GovernanceRows$Approval">
+        SELECT * FROM agent_egress_approval WHERE id=#{id}
+    </select>
+    <select id="liveApprovals" resultType="com.felix.aigatecore.governance.GovernanceRows$Approval">
+        SELECT * FROM agent_egress_approval WHERE agent_id=#{agent} AND provider_id=#{provider} AND region_code=#{region} AND status='ACTIVE' AND valid_from &lt;= #{at} AND valid_until &gt; #{at} ORDER BY revision DESC
+    </select>
+    <select id="listApprovals" resultType="com.felix.aigatecore.governance.GovernanceRows$Approval">
+        SELECT * FROM agent_egress_approval <where>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="agent != null"> AND agent_id=#{agent} </if>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="provider != null"> AND provider_id=#{provider} </if>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="status != null"> AND (CASE WHEN status='ACTIVE' AND valid_until &lt;= #{at} THEN 'EXPIRED' ELSE status END)=#{status} </if></where> ORDER BY id LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countApprovals" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM agent_egress_approval <where>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="agent != null"> AND agent_id=#{agent} </if>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="provider != null"> AND provider_id=#{provider} </if>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="status != null"> AND (CASE WHEN status='ACTIVE' AND valid_until &lt;= #{at} THEN 'EXPIRED' ELSE status END)=#{status} </if></where>
+    </select>
+    <select id="boundary" resultType="com.felix.aigatecore.governance.GovernanceRows$Boundary">
+        SELECT * FROM deployment_data_boundary WHERE deployment_id=#{deployment}
+    </select>
+    <select id="lockBoundary" resultType="com.felix.aigatecore.governance.GovernanceRows$Boundary">
+        SELECT * FROM deployment_data_boundary WHERE deployment_id=#{deployment} FOR UPDATE
+    </select>
+    <insert id="insertBoundary" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO deployment_data_boundary(deployment_id,approved_class_max,trusted_region,hosting_mode,security_approval_status,approval_valid_until,data_processing_approved,approved_by,created_at,updated_at) VALUES(#{deployment},#{classification},#{region},#{hosting},#{status},#{until},#{processing},#{actor},#{now},#{now})
+    </insert>
+    <update id="updateBoundary">
+        UPDATE deployment_data_boundary SET approved_class_max=#{classification},trusted_region=#{region},hosting_mode=#{hosting},security_approval_status=#{status},approval_valid_until=#{until},data_processing_approved=#{processing},approved_by=#{actor},version=version+1,updated_at=#{now} WHERE id=#{id} AND version=#{version}
+    </update>
+    <select id="exception" resultType="com.felix.aigatecore.governance.GovernanceRows$ExceptionRequest">
+        SELECT * FROM governance_exception_request WHERE id=#{id}
+    </select>
+    <select id="lockException" resultType="com.felix.aigatecore.governance.GovernanceRows$ExceptionRequest">
+        SELECT * FROM governance_exception_request WHERE id=#{id} FOR UPDATE
+    </select>
+    <select id="exceptionReceipt" resultType="com.felix.aigatecore.governance.GovernanceRows$ExceptionRequest">
+        SELECT * FROM governance_exception_request WHERE requester_employee_id=#{employee} AND idempotency_key=#{key} FOR UPDATE
+    </select>
+    <insert id="insertException" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO governance_exception_request(requester_employee_id,employee_id,agent_id,logical_model_id,rule_code,reason_code,policy_revision_id,valid_until,idempotency_key,created_at,updated_at) VALUES(#{employee},#{employee},#{agent},#{model},#{rule},#{reason},#{revision},#{until},#{key},#{now},#{now})
+    </insert>
+    <update id="reviewException">
+        UPDATE governance_exception_request SET status=#{status},version=version+1,reviewer_id=#{actor},reviewed_at=#{now},safe_reason_description=#{reason},updated_at=#{now} WHERE id=#{id} AND status='PENDING' AND version=#{version}
+    </update>
+    <update id="revokeException">
+        UPDATE governance_exception_request SET status='REVOKED',version=version+1,safe_reason_description=#{reason},updated_at=#{now} WHERE id=#{id} AND status='APPROVED' AND version=#{version}
+    </update>
+    <select id="liveExceptions" resultType="com.felix.aigatecore.governance.GovernanceRows$ExceptionRequest">
+        SELECT * FROM governance_exception_request WHERE employee_id=#{employee} AND agent_id=#{agent} AND logical_model_id=#{model} AND policy_revision_id=#{revision} AND rule_code='APPROVED_SENSITIVE_MARKERS_V1' AND status='APPROVED' AND valid_until &gt; #{at}
+    </select>
+    <insert id="insertDecision">
+        INSERT INTO governance_decision_audit(trace_id,decision_phase,decision_ordinal,policy_revision_id,employee_id,agent_id,logical_model_id,deployment_id,data_class,decision,matched_rule_codes_json,input_hmac_digest,scanner_version,created_at) VALUES(#{trace},#{phase},#{ordinal},#{revision},#{employee},#{agent},#{model},#{deployment},#{classification},#{decision},#{codes},#{digest},#{scanner},#{now})
+    </insert>
+    <select id="inputReview" resultType="com.felix.aigatecore.governance.GovernanceRows$Decision">
+        SELECT * FROM governance_decision_audit WHERE trace_id=#{trace} AND employee_id=#{employee} AND agent_id=#{agent} AND logical_model_id=#{model} AND deployment_id=#{deployment} AND policy_revision_id=#{revision} AND decision_phase='PREDISPATCH' AND decision='REVIEW_REQUIRED' ORDER BY decision_ordinal DESC LIMIT 1
+    </select>
+    <select id="listDecisions" resultType="com.felix.aigatecore.governance.GovernanceRows$Decision">
+        SELECT * FROM governance_decision_audit WHERE created_at &gt;= #{from} AND created_at &lt;= #{to}
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="agent != null"> AND agent_id=#{agent} </if>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="decision != null"> AND decision=#{decision} </if> ORDER BY id LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countDecisions" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM governance_decision_audit WHERE created_at &gt;= #{from} AND created_at &lt;= #{to}
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="agent != null"> AND agent_id=#{agent} </if>
+<!-- Map字段由服务白名单构造。 -->
+<!--suppress XmlUnresolvedReference -->
+<if test="decision != null"> AND decision=#{decision} </if>
+    </select>
+</mapper>

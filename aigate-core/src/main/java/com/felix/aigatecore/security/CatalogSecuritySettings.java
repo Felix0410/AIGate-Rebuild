@@ -144,4 +144,15 @@ public class CatalogSecuritySettings {
     public KeyMaterial issue(String id) {
         return id == null ? null : issue.get(id);
     }
+
+    /**
+     * 对其它用途检查全部当前/历史材料是否已被Catalog占用，不暴露材料本身。
+     *
+     * @param candidate 待校验的独立材料
+     * @return 当前或历史材料相同时为true
+     */
+    public boolean usesMaterial(byte[] candidate) {
+        return encryption.values().stream().anyMatch(key -> Arrays.equals(candidate, key.bytes()))
+            || issue.values().stream().anyMatch(key -> Arrays.equals(candidate, key.bytes()));
+    }
 }

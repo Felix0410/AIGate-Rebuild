@@ -275,9 +275,10 @@ public class IdentityService {
      */
     private Map<String, Object> createRoleParameters(long employeeId, String role, String scope, long scopeId) {
         // 检查角色与作用域：平台管理员只能是 GLOBAL/0，团队管理员只能是 TEAM/正数。
-        if (!Set.of("PLATFORM_ADMIN", "TEAM_MANAGER", "FINOPS_READER").contains(role)
+        if (!Set.of("PLATFORM_ADMIN", "TEAM_MANAGER", "FINOPS_READER", "POLICY_EDITOR", "SECURITY_APPROVER")
+            .contains(role)
             || !(scope.equals("GLOBAL") && scopeId == 0 && !role.equals("TEAM_MANAGER")
-                || scope.equals("TEAM") && scopeId > 0 && !role.equals("PLATFORM_ADMIN"))) {
+                || scope.equals("TEAM") && scopeId > 0 && Set.of("TEAM_MANAGER", "FINOPS_READER").contains(role))) {
             throw ApiException.invalid();
         }
 

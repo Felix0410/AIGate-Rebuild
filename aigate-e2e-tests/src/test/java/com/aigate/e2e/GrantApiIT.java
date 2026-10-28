@@ -109,7 +109,7 @@ class GrantApiIT extends AbstractIdentityIntegrationTest {
         assertEquals("0.000000", after.get("items").get(0).get("availablePoints").asString());
         assertEquals("900.000000", expect(call("GET", pool, f.managerKey(), null), 200)
             .get("availablePoints").asString());
-        expect(call("GET", "/api/v1/governance/policies/active", f.admin().key(), null), 404);
+        expect(call("GET", "/api/v1/models/1/routing-policies", f.admin().key(), null), 404);
         expect(call("POST", "/v1/chat/completions", f.admin().key(), "{}"), 404);
     }
 

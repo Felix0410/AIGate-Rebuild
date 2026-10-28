@@ -86,7 +86,18 @@ public final class ManagementRouteCatalog {
         new Route("/api/v1/teams/{teamId}/pool", Set.of("GET")),
         new Route("/api/v1/teams/{teamId}/grants", Set.of("GET", "POST")),
         new Route("/api/v1/teams/{teamId}/grants/{grantId}/revoke", Set.of("POST")),
-        new Route("/api/v1/employees/me/grants", Set.of("GET")));
+        new Route("/api/v1/employees/me/grants", Set.of("GET")),
+        new Route("/api/v1/governance/policies/drafts", Set.of("POST")),
+        new Route("/api/v1/governance/policies/{revisionId}/submit", Set.of("POST")),
+        new Route("/api/v1/governance/policies/{revisionId}/review", Set.of("POST")),
+        new Route("/api/v1/governance/policies/{revisionId}/publish", Set.of("POST")),
+        new Route("/api/v1/governance/policies/active", Set.of("GET")),
+        new Route("/api/v1/governance/agent-egress-approvals", Set.of("GET", "POST")),
+        new Route("/api/v1/governance/deployment-boundaries/{deploymentId}", Set.of("PUT")),
+        new Route("/api/v1/governance/exceptions", Set.of("POST")),
+        new Route("/api/v1/governance/exceptions/{requestId}/review", Set.of("POST")),
+        new Route("/api/v1/governance/exceptions/{requestId}/revoke", Set.of("POST")),
+        new Route("/api/v1/governance/decisions", Set.of("GET")));
 
     /**
      * 识别编码路径、路径穿越和分号等可能绕过白名单的路径形式。

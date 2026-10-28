@@ -120,6 +120,34 @@ public final class ValidatedBody {
     }
 
     /**
+     * 读取合同声明的数组，不接受对象、标量或null。
+     *
+     * @param key 数组字段
+     * @return 与原正文分离的数组
+     */
+    public JsonNode array(String key) {
+        JsonNode value = node.get(key);
+        if (value == null || !value.isArray()) {
+            throw ApiException.invalid();
+        }
+        return value.deepCopy();
+    }
+
+    /**
+     * 读取严格JSON布尔值。
+     *
+     * @param key 布尔字段
+     * @return 原始布尔值
+     */
+    public boolean bool(String key) {
+        JsonNode value = node.get(key);
+        if (value == null || !value.isBoolean()) {
+            throw ApiException.invalid();
+        }
+        return value.booleanValue();
+    }
+
+    /**
      * 原样读取秘密或定点价格，不去空白、不替换无法编码的 Unicode 字符。
      *
      * @param key 当前接口允许的字符串字段
