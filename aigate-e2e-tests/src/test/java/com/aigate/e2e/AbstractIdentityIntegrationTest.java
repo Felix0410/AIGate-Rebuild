@@ -275,7 +275,8 @@ abstract class AbstractIdentityIntegrationTest {
         try (Connection db = db();
             var statement = db.createStatement()) {
             statement.execute("SET FOREIGN_KEY_CHECKS=0");
-            for (String table : List.of("governance_decision_audit", "governance_exception_request",
+            for (String table : List.of("reconciliation_case", "result_report_receipt", "dispatch_permit",
+                "invocation", "capacity_pool_policy", "governance_decision_audit", "governance_exception_request",
                 "deployment_data_boundary",
                 "agent_egress_approval", "governance_rule", "governance_policy_revision", "governance_policy",
                 "team_grant_issue_receipt", "team_grant", "team_pool", "outbox_event",

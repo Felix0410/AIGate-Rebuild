@@ -1,8 +1,18 @@
 # Progress · 当前阶段与决策
 
-> 更新日期：2026-10-26。P1/P2已有提交，用户已启动P3并明确授权补齐相关设计、文档和实现。P3现为 **IMPLEMENTED / LOCAL_PASS / PENDING_USER_ACCEPTANCE**；P4尚未启动。
+> 更新日期：2026-10-28。用户已提交P6并授权启动P7。P7状态为 **IN_PROGRESS**；当前仅完成迁移与请求规范化基础，不代表Runtime已交付。
 
-## 1. 当前实际状态
+## 当前状态（2026-10-28，覆盖下方历史记录）
+
+- Git已提交P3 `3d1fbe4`、P4 `1a8fef4`、P5 `551a779`、P6 `46c6493`。本轮从干净的P6提交开始；用户明确授权进入P7。
+- P7新增规范V7五表及旧表外键迁移；共享ChatRequestV1封闭解析、规范字节与Core专属版本化请求HMAC工具已编写。
+- 公开Chat入口尚未开放；Redis队列/容量池管理、六类RPC、唯一Permit资金事务、Provider JSON/SSE和FakeProvider故障闭环仍待实现。
+- 完整阶段不能标记LOCAL_PASS或请求签收。基础实现的验证证据见[P7启动记录](./phases/p07-start.md)。
+- 之前P3的79项测试是2026-10-26历史证据，不能当作本轮或P6/P7的测试结果。远程CI状态本轮未核查。
+
+以下保留P3交付历史，里面“当前”“未提交”“P4尚未启动”等仅指2026-10-26。
+
+## 1. P3历史实际状态（2026-10-26）
 
 | 项目 | 当前证据与状态 |
 |---|---|
@@ -87,7 +97,7 @@ DOCKER_HOST=unix:///Users/felix/.docker/run/docker.sock ./mvnw -B -ntp clean ver
 
 功能检查 → Code Review → 测试检查 → 架构检查 → 技术债 → Progress → Architecture → ADR（如需）→ 知识点 → 面试表达，等待用户确认后下一Phase。
 
-## 9. 当前剩余门禁
+## 9. P3历史剩余门禁（2026-10-26）
 
 1. 用户审查P3设计、改动、实际报告并决定签收/提交；未签收前不自动启动P4。
 2. 提交后由真实远程CI执行相同verify；本地PASS不等于远程CI已经运行。

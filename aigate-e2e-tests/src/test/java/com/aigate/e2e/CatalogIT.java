@@ -1077,8 +1077,10 @@ class CatalogIT extends AbstractIdentityIntegrationTest {
                         catalog.admin().key(), "{}"),
                     404);
                 assertEquals(0, providerRequests.get());
-                assertEquals(0, scalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='core_db' "
-                    + "AND table_name IN ('invocation','dispatch_permit','capacity_pool')"));
+                // P7基础迁移已建表，但P3故障回归仍不能创建任何运行记录或Permit。
+                assertEquals(0, scalar("SELECT COUNT(*) FROM invocation"));
+                assertEquals(0, scalar("SELECT COUNT(*) FROM dispatch_permit"));
+                assertEquals(0, scalar("SELECT COUNT(*) FROM capacity_pool_policy"));
             } finally {
                 proxy.stop(0);
                 fakeProvider.stop(0);

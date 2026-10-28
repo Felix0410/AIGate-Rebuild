@@ -621,7 +621,7 @@ class FinanceMySqlTests {
             .collect(java.util.stream.Collectors.joining("\n")).strip();
         assertEquals(ddl, java.nio.file.Files.readString(root.resolve(
             "aigate-core/src/main/resources/db/migration/V4__normal_quota_billing.sql")).strip());
-        assertEquals(6, count("flyway_schema_history"));
+        assertEquals(7, count("flyway_schema_history"));
         for (String table : List.of("quota_policy", "quota_bucket", "provider_spend_budget",
             "provider_spend_partition", "finance_operation", "points_reservation", "reservation_allocation",
             "provider_spend_reservation", "ledger_entry", "outbox_event")) {
@@ -682,7 +682,7 @@ class FinanceMySqlTests {
         assertThrows(java.sql.SQLException.class, () -> sql("UPDATE team_grant_issue_receipt SET amount_points=0"));
         assertEquals(1, count("team_grant_issue_receipt"));
         assertEquals(grant.grantId(), Long.parseLong(scalar("SELECT team_grant_id FROM team_grant_issue_receipt")));
-        assertEquals(6, count("flyway_schema_history"));
+        assertEquals(7, count("flyway_schema_history"));
     }
 
     @Test
@@ -1424,6 +1424,76 @@ class FinanceMySqlTests {
                 + "(employee_id,role_code,scope_type,scope_id,created_at,updated_at) "
                 + "VALUES(1,'SECURITY_APPROVER','TEAM',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"));
         }
+    }
+
+    @Test
+    @DisplayName("P7迁移基础：五表规范匹配，池默认关闭、资源身份唯一、部署外键和CHECK真实生效")
+    void runtimeSchemaEnforcesCapacityAndDeploymentConstraints() throws Exception {
+        var root = java.nio.file.Path.of("..");
+        String design = java.nio.file.Files.readString(root.resolve("docs/database/core-v07.md"));
+        String ddl = design.split("```sql\n", 2)[1].split("```", 2)[0].strip();
+        assertEquals(ddl, java.nio.file.Files.readString(root.resolve(
+            "aigate-core/src/main/resources/db/migration/V7__invocation_runtime.sql")).strip());
+        assertEquals(7, count("flyway_schema_history"));
+        for (String table : List.of("capacity_pool_policy", "invocation", "dispatch_permit", "result_report_receipt",
+            "reconciliation_case")) {
+            assertEquals(0, count(table));
+        }
+        sql("INSERT INTO capacity_pool_policy(pool_code,scope_kind,resource_identity_code,capacity_evidence_ref,"
+            + "max_active,max_waiting,max_queue_ms,max_run_ms,rpm_limit,created_at,updated_at) "
+            + "VALUES('TEST_POOL','PROVIDER','TEST_IDENTITY','TEST_ONLY',1,2,1000,10000,60,"
+            + "UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))");
+        assertEquals("DISABLED", scalar("SELECT status FROM capacity_pool_policy"));
+        assertEquals("0", scalar("SELECT admission_epoch FROM capacity_pool_policy"));
+        assertThrows(java.sql.SQLException.class, () -> sql("INSERT INTO capacity_pool_policy("
+            + "pool_code,scope_kind,resource_identity_code,capacity_evidence_ref,max_active,max_waiting,"
+            + "max_queue_ms,max_run_ms,rpm_limit,created_at,updated_at) VALUES('TEST_ALIAS','PROVIDER',"
+            + "'TEST_IDENTITY','TEST_ONLY',1,2,1000,10000,60,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"));
+        for (String change : List.of("max_active=0", "max_waiting=-1", "max_queue_ms=0", "max_run_ms=0",
+            "rpm_limit=0", "admission_epoch=-1", "status='OPEN'", "scope_kind='FAKE'")) {
+            assertThrows(java.sql.SQLException.class, () -> sql("UPDATE capacity_pool_policy SET " + change));
+        }
+        assertThrows(java.sql.SQLException.class, () -> sql("UPDATE model_deployment SET capacity_pool_id=99999"));
+        sql("UPDATE model_deployment SET capacity_pool_id=1");
+        assertThrows(java.sql.SQLException.class, () -> sql("DELETE FROM capacity_pool_policy WHERE id=1"));
+    }
+
+    @Test
+    @DisplayName("P7迁移基础：真实V6历史升级V7，37张旧表及checksum保持，重复迁移不执行")
+    void realV6HistorySurvivesV7ForeignKeysAndNewRuntimeTables() throws Exception {
+        teamPool("1000.000000", null);
+        grant("runtime-upgrade-grant", "100.000000", "2026-11-05T00:00:00Z");
+        sql("CREATE DATABASE runtime_upgrade_db");
+        String url = MYSQL.getJdbcUrl().replace("/core_db", "/runtime_upgrade_db");
+        org.flywaydb.core.Flyway.configure().dataSource(url, "root", ROOT_PASSWORD)
+            .locations("classpath:db/migration").target("6").load().migrate();
+        var tables = new ArrayList<String>();
+        try (var connection = DriverManager.getConnection(MYSQL.getJdbcUrl(), "root", ROOT_PASSWORD);
+            var statement = connection.createStatement()) {
+            try (var rows = statement.executeQuery("SELECT table_name FROM information_schema.tables "
+                + "WHERE table_schema='runtime_upgrade_db' AND table_name!='flyway_schema_history'")) {
+                while (rows.next()) {
+                    tables.add(rows.getString(1));
+                }
+            }
+            statement.execute("SET FOREIGN_KEY_CHECKS=0");
+            for (String table : tables) {
+                statement.execute("TRUNCATE TABLE runtime_upgrade_db." + table);
+                statement.execute("INSERT INTO runtime_upgrade_db." + table + " SELECT * FROM core_db." + table);
+            }
+            statement.execute("SET FOREIGN_KEY_CHECKS=1");
+        }
+        assertEquals(37, tables.size());
+        var before = tableDigests("runtime_upgrade_db", tables);
+        var checksums = history("runtime_upgrade_db");
+        var flyway = org.flywaydb.core.Flyway.configure().dataSource(url, "root", ROOT_PASSWORD)
+            .locations("classpath:db/migration").target("7").load();
+        assertEquals(1, flyway.migrate().migrationsExecuted);
+        assertEquals(before, tableDigests("runtime_upgrade_db", tables));
+        var after = history("runtime_upgrade_db");
+        assertEquals(7, after.size());
+        checksums.forEach((version, checksum) -> assertEquals(checksum, after.get(version)));
+        assertEquals(0, flyway.migrate().migrationsExecuted);
     }
 
     @AfterEach

@@ -1,6 +1,6 @@
 # Core V07 · V7__invocation_runtime.sql
 
-> 实施时点：P7；本页为**设计SQL基准**，尚未经过MySQL8.4/Flyway实测。实际迁移文件由本地AI创建。已运行版本禁止原地编辑。
+> 实施时点：P7；本页为**设计SQL基准**。2026-10-28已创建对应V7迁移，并在隔离MySQL8.4通过新库迁移、V6历史升级与约束测试，见[P7启动记录](../phases/p07-start.md)。Runtime完整业务尚未实现；已运行版本禁止原地编辑。
 
 ## 1. 目的与实施范围
 
@@ -194,6 +194,6 @@ ALTER TABLE model_deployment
 - 先执行真实MySQL8.4/Flyway新库迁移，再执行上一版本真实历史升级，记录`schema_history`与checksum。
 - 使用应用账户验证不能执行DDL；检查业务数据并发和外键拒绝情形。
 - 仅本Phase上线后才可以访问对应管理API与受信内部RPC。
-- 本规范只证明设计选择已明确，**真实测试状态NOT RUN**。
+- 本规范定义结构；2026-10-28迁移基础测试通过，Runtime/Permit/Provider完整阶段验证仍未完成。
 
 参照 [数据库目录](../05-database-design.md)、[所属模块](../phases/README.md)、[验收](../09-test-plan.md)。

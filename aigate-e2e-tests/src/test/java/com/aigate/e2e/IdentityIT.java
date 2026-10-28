@@ -85,7 +85,7 @@ class IdentityIT extends AbstractIdentityIntegrationTest {
 
         expect(call("POST", "/api/v1/bootstrap/initialize", bootstrapToken, bootstrapBody("Other", "ADM_OTHER"),
             "bootstrap-restart"), 409);
-        assertEquals(6, scalar("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1"));
+        assertEquals(7, scalar("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1"));
     }
 
     /**
@@ -572,7 +572,7 @@ class IdentityIT extends AbstractIdentityIntegrationTest {
         }
 
         // 2、检查表数量和 V1 成功迁移记录不变。
-        assertEquals(38, scalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='core_db'"));
+        assertEquals(43, scalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='core_db'"));
         assertEquals(1, scalar("SELECT COUNT(*) FROM flyway_schema_history WHERE version='1' AND success=1"));
 
         // 3、直接提交非法状态和不存在的外键，检查数据库约束仍生效。
